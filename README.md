@@ -5,54 +5,48 @@ A secure, real-time multi-user chat application with advanced AI integration, ro
 ## 🏗️ Architecture Overview
 
 ```mermaid
-graph TB
-    subgraph "Client Layer"
-        WEB[Web Frontend<br/>HTML/JS/CSS]
+graph LR
+    subgraph "Frontend"
+        A[Web Client<br/>HTML/JS/CSS]
     end
     
-    subgraph "Application Layer"
-        NGINX[Nginx<br/>Reverse Proxy<br/>SSL Termination]
-        API[FastAPI Backend<br/>WebSocket Server<br/>REST API]
+    subgraph "Proxy Layer"
+        B[Nginx<br/>SSL & Reverse Proxy]
     end
     
-    subgraph "Data Layer"
-        REDIS[(Redis<br/>Chat Rooms<br/>Messages<br/>Sessions)]
-        SQLITE[(SQLite<br/>User Database<br/>Authentication)]
+    subgraph "Backend Services"
+        C[FastAPI Server<br/>WebSocket + REST API]
     end
     
-    subgraph "External Services"
-        AI[AI Models<br/>OpenAI Compatible API]
-        TTS[ElevenLabs TTS<br/>Voice Synthesis]
+    subgraph "Data Storage"
+        D[(Redis<br/>Chat Messages<br/>& Sessions)]
+        E[(SQLite<br/>Users & Auth)]
     end
     
-    subgraph "Infrastructure"
-        DOCKER[Docker Containers<br/>Health Monitoring]
+    subgraph "External APIs"
+        F[AI Models<br/>OpenAI Compatible]
+        G[ElevenLabs<br/>Text-to-Speech]
     end
     
-    WEB -.->|HTTPS/WSS| NGINX
-    NGINX -->|Proxy| API
-    API -->|WebSocket<br/>Real-time Chat| WEB
-    API -->|Store/Retrieve<br/>Messages| REDIS
-    API -->|User Auth<br/>Management| SQLITE
-    API -->|AI Requests<br/>Chat Context| AI
-    API -->|Voice Synthesis<br/>TTS Requests| TTS
+    A -->|HTTPS/WSS| B
+    B -->|Proxy| C
+    C -->|WebSocket| A
+    C -->|Store/Read| D
+    C -->|Auth/Users| E
+    C -->|AI Requests| F
+    C -->|Voice Synthesis| G
     
-    DOCKER -.->|Container Management| NGINX
-    DOCKER -.->|Container Management| API
-    DOCKER -.->|Container Management| REDIS
-    DOCKER -.->|Container Management| SQLITE
+    classDef frontend fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef proxy fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef backend fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef storage fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef external fill:#f8bbd9,stroke:#c2185b,stroke-width:2px,color:#000
     
-    classDef client fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef app fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef data fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef infra fill:#fafafa,stroke:#616161,stroke-width:2px
-    
-    class WEB client
-    class NGINX,API app
-    class REDIS,SQLITE data
-    class AI,TTS external
-    class DOCKER infra
+    class A frontend
+    class B proxy
+    class C backend
+    class D,E storage
+    class F,G external
 ```
 
 ### Key Components
