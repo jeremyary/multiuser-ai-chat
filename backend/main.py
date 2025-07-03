@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import re
 
 # Add shared directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -339,6 +340,32 @@ async def websocket_endpoint(
         await connection_manager.disconnect(user_id)
 
 
+def should_trigger_ai_response(content: str) -> bool:
+    """
+    Check if message content should trigger an AI response.
+    Handles punctuation and word boundaries properly.
+    """
+    content_lower = content.lower()
+    
+    for trigger in AI_TRIGGERS:
+        trigger_lower = trigger.lower()
+        
+        # For @ mentions, look for start of string or whitespace before @
+        if trigger_lower.startswith('@'):
+            # Match @word at start or after whitespace, followed by word boundary or punctuation
+            pattern = r'(^|\s)' + re.escape(trigger_lower) + r'(?=\s|[,.!?;:]|$)'
+            if re.search(pattern, content_lower):
+                return True
+        else:
+            # For phrase triggers like "hey ai", "hey bot", etc.
+            # Allow punctuation after the phrase
+            pattern = r'\b' + re.escape(trigger_lower) + r'(?=\s|[,.!?;:]|$)'
+            if re.search(pattern, content_lower):
+                return True
+    
+    return False
+
+
 async def handle_websocket_message(user_id: str, room_id: str, ws_message: WebSocketMessage):
     """Handle incoming WebSocket messages"""
     try:
@@ -393,7 +420,7 @@ async def handle_chat_message(user_id: str, room_id: str, message_data: dict):
     })
     
     # Check if AI should respond
-    should_trigger_ai = any(trigger.lower() in content.lower() for trigger in AI_TRIGGERS)
+    should_trigger_ai = should_trigger_ai_response(content)
     
     if should_trigger_ai:
         await handle_ai_response(room_id, content, user_info.username)
@@ -614,7 +641,7 @@ async def get_user_rooms(request: Request, current_user = Depends(get_current_us
 
 
 @app.post("/rooms")
-@limiter.limit("10/minute")  # Allow 10 room creations per minute
+@limiter.limit("60/minute")  # Allow 60 room creations per minute (increased for testing)
 async def create_room(
     request: Request,
     room_data: dict,
@@ -831,6 +858,38 @@ async def get_room_messages(
     """Get recent messages for a room (requires authentication)"""
     messages = await chat_manager.get_recent_messages(room_id, limit)
     return {"messages": [msg.to_websocket_dict() for msg in messages]}
+
+
+@app.delete("/rooms/{room_id}/messages")
+async def clear_room_messages(
+    room_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Clear all messages from a room (admin only)"""
+    try:
+        # Check admin status (use role field - is_admin doesn't exist in the model)
+        user_is_admin = getattr(current_user, 'role', '') == 'admin'
+        
+        if not user_is_admin:
+            raise HTTPException(status_code=403, detail="Only admin can clear room messages")
+        
+        # Check if room exists
+        room = await chat_manager.get_room(room_id)
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        
+        # Clear all messages from the room
+        success = await chat_manager.clear_room_messages(room_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to clear room messages")
+        
+        return {"message": f"Messages cleared from room '{room.room_name}' successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error clearing messages from room {room_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear room messages")
 
 
 @app.post("/tts")

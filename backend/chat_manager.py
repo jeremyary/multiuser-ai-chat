@@ -289,6 +289,33 @@ class ChatManager:
             logger.error(f"Error deleting message {message_id}: {e}")
             return False
     
+    async def clear_room_messages(self, room_id: str) -> bool:
+        """Clear all messages from a room while keeping the room intact"""
+        try:
+            # Get all messages to remove individual message keys
+            messages_key = RedisKeys.CHAT_MESSAGES.format(room_id=room_id)
+            raw_messages = await self.redis.zrange(messages_key, 0, -1)
+            
+            # Remove individual message keys
+            for raw_msg in raw_messages:
+                try:
+                    msg_data = json.loads(raw_msg.decode())
+                    msg_key = f"chat:message:{msg_data['message_id']}"
+                    await self.redis.delete(msg_key)
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Skipping malformed message during cleanup: {e}")
+                    continue
+            
+            # Remove the sorted set containing all messages for this room
+            await self.redis.delete(messages_key)
+            
+            logger.info(f"Cleared all messages from room {room_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error clearing messages from room {room_id}: {e}")
+            return False
+    
     async def get_active_users(self, room_id: str) -> List[str]:
         """Get list of active users in a room"""
         try:

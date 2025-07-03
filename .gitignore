@@ -92,6 +92,15 @@ dump.rdb
 *.p12
 *.pfx
 *.csr
+*.crt
 *.pem
 *.key
 /nginx/ssl/
+/node_modules/
+
+# Testing - Playwright and automated tests
+tests/test-data.json
+tests/debug-screenshots/
+test-results/
+playwright-report/
+playwright/.cache/

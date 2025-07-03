@@ -1,0 +1,34 @@
+{
+  "name": "ai-chat-workspace",
+  "version": "1.0.0",
+  "description": "A secure, real-time multi-user chat application with advanced AI integration, role-based access control, voice synthesis, and comprehensive user management. Built with Python FastAPI backend, modern HTML/JavaScript frontend, Redis, and SQLite in a fully containerized architecture.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:auth": "playwright test tests/auth",
+    "test:chat": "playwright test tests/chat",
+    "test:rooms": "playwright test tests/rooms",
+    "test:ai": "playwright test tests/ai",
+    "test:mobile": "playwright test tests/ui/mobile-responsive.spec.js",
+    "test:with-setup": "playwright test tests/auth/login-with-test-users.spec.js",
+    "test:cleanup": "node tests/manual-cleanup.js",
+    "test:report": "playwright show-report",
+    "test:install": "playwright install",
+    "test:codegen": "playwright codegen https://localhost:3443"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.53.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.2"
+  }
+}

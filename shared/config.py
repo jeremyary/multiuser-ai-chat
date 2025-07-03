@@ -125,6 +125,7 @@ AI_TRIGGERS = [
     "@bot",
     "@styx",
     "hey ai",
+    "hey bot",
     "hey styx",
     "ai help",
     "ai:",

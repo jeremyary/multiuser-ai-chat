@@ -1,6 +1,6 @@
 # Multi-User AI Chat
 
-A secure, real-time multi-user chat application with advanced AI integration, role-based access control, voice synthesis, and comprehensive user management. Built with Python FastAPI backend, modern HTML/JavaScript frontend, Redis, and SQLite in a fully containerized architecture.
+A combination of tinkering with new tools, prepping for model experimentation, and facilitating agent use on my local network brought about a real-time multi-user chat application with AI agent integration, RBAC, TTS responses, and user management.
 
 ## 🏗️ Architecture Overview
 
@@ -126,6 +126,17 @@ graph LR
 
 - **Restricted Access**: Limited to assigned private rooms and general chat
 - **Admin Oversight**: Admin-controlled room assignments
+</details>
+
+<details>
+<summary>🧪 Testing & Quality Assurance</summary>
+
+- **End-to-End Testing**: Comprehensive Playwright test suite covering all features
+- **Test Isolation**: Dedicated test users and rooms that don't interfere with production
+- **Automatic Cleanup**: Self-cleaning test environment with Redis and database cleanup
+- **Multiple Test Suites**: Authentication, chat, AI integration, rooms, and UI tests
+- **Test Utilities**: Helper functions for common testing scenarios
+- **CI/CD Ready**: Structured for continuous integration and automated testing
 </details>
 
 ## 📱 Screenshots
@@ -258,6 +269,58 @@ The AI responds to various trigger patterns:
 - **Colon notation**: `ai: <question>`
 - **Help requests**: `ai help`
 
+## 🧪 Testing
+
+The project includes a comprehensive test suite built with Playwright for end-to-end testing of authentication, chat functionality, AI integration, and user interface components.
+
+### Test Prerequisites
+
+- **Node.js 18+** and **npm** (for Playwright)
+- **Running application** on `https://localhost:3443`
+- **Admin access** to create test users and rooms
+
+### Test Installation
+
+```bash
+# Install test dependencies
+make test-install
+
+# Or manually:
+npm install
+npm run test:install
+```
+
+### Running Tests
+
+```bash
+# Run all tests (recommended)
+make test
+
+# Run specific test suites
+make test-auth      # Authentication tests
+make test-chat      # Chat functionality tests  
+make test-ai        # AI integration tests
+
+# Interactive test UI
+make test-ui        # Run tests with Playwright UI
+
+# Debug mode
+make test-debug     # Run tests with debug output
+```
+
+### Manual Cleanup (test suite will attempt to self-clean)
+
+```bash
+# Clean up test environment manually
+make test-cleanup
+
+# Dry run to see what would be cleaned
+make cleanup-all-dry
+
+# Comprehensive cleanup (Redis + Database)
+make cleanup-all
+```
+
 ## 🛠️ Available Commands
 
 The included Makefile provides comprehensive deployment and management commands:
@@ -320,17 +383,3 @@ make restart
 ## 📝 License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE.md](LICENSE.md) file for details.
-
-## 🆘 Support
-
-For technical support or feature requests:
-1. Check the troubleshooting section above
-2. Review application logs via `make logs`
-3. Verify configuration in `.env` file
-4. Test with minimal configuration first
-
----
-
-
-### **Security Note**: 
-**Remember to change default passwords and update JWT secrets before production deployment!**

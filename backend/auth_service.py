@@ -118,13 +118,31 @@ class AuthService:
     def create_user(self, db: Session, user: UserCreate) -> UserTable:
         """Create a new user"""
         # Check if username already exists
-        if self.get_user_by_username(db, user.username):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already registered"
-            )
+        existing_user = self.get_user_by_username(db, user.username)
+        if existing_user:
+            # If user exists but is inactive, reactivate and update it
+            if not existing_user.is_active:
+                logger.info(f"Reactivating inactive user: {user.username}")
+                existing_user.is_active = True
+                existing_user.hashed_password = self.get_password_hash(user.password)
+                existing_user.full_name = user.full_name
+                existing_user.role = user.role.value
+                existing_user.avatar_color = user.avatar_color
+                existing_user.is_kid_account = user.is_kid_account
+                existing_user.last_activity = datetime.utcnow()
+                db.commit()
+                db.refresh(existing_user)
+                
+                logger.info(f"Reactivated user: {user.username}")
+                return existing_user
+            else:
+                # User exists and is active
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already registered"
+                )
         
-        # Create user
+        # Create new user
         hashed_password = self.get_password_hash(user.password)
         db_user = UserTable(
             username=user.username,

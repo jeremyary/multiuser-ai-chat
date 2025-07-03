@@ -27,7 +27,11 @@ class DatabaseManager:
         self.engine = create_engine(
             database_url,
             connect_args={"check_same_thread": False} if "sqlite" in database_url else {},
-            echo=Config.DEBUG  # Log SQL queries in debug mode
+            echo=Config.DEBUG,  # Log SQL queries in debug mode
+            pool_size=20,  # Increased from default 5
+            max_overflow=30,  # Increased from default 10
+            pool_recycle=3600,  # Recycle connections after 1 hour
+            pool_pre_ping=True  # Verify connections before use
         )
         
         # Create session factory
@@ -58,9 +62,13 @@ class DatabaseManager:
         try:
             yield session
             session.commit()
-        except Exception as e:
+        except SQLAlchemyError as e:
             session.rollback()
             logger.error(f"Database session error: {e}")
+            raise
+        except Exception:
+            # Rollback for any other exception but don't log as database error
+            session.rollback()
             raise
         finally:
             session.close()
