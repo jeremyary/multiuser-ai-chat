@@ -100,8 +100,8 @@ class AuthService:
             password_valid = self.verify_password(password, user.hashed_password)
         else:
             # Use a dummy bcrypt hash to maintain consistent timing
-            dummy_hash = "$2b$12$dummy.hash.to.prevent.timing.attacks.and.username.enumeration"
-            self.verify_password(password, dummy_hash)
+            from shared.config import Config
+            self.verify_password(password, Config.DUMMY_PASSWORD_HASH)
             password_valid = False
         
         # Return False if user doesn't exist, password is wrong, or user is inactive

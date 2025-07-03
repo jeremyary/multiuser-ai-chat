@@ -44,6 +44,9 @@ class Config:
     MIN_PASSWORD_LENGTH: int = int(os.getenv("MIN_PASSWORD_LENGTH", "8"))
     ENABLE_AUDIT_LOGGING: bool = os.getenv("ENABLE_AUDIT_LOGGING", "true").lower() == "true"
     
+    # Dummy hash for timing attack prevention (security feature)
+    DUMMY_PASSWORD_HASH: str = os.getenv("DUMMY_PASSWORD_HASH", "$2b$12$dummy.hash.to.prevent.timing.attacks.and.username.enumeration")
+    
     # Rate Limiting Configuration
     API_RATE_LIMIT: str = os.getenv("API_RATE_LIMIT", "100/minute")
     WS_RATE_LIMIT: str = os.getenv("WS_RATE_LIMIT", "30/minute")
