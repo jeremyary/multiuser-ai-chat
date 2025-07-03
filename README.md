@@ -161,6 +161,7 @@ graph LR
 | `MAX_MESSAGE_LENGTH` | 2000 | Maximum message length |
 | `MAX_CHAT_HISTORY` | 100 | Messages to keep in history |
 | `AI_RESPONSE_TIMEOUT` | 30 | AI response timeout (seconds) |
+| `DUMMY_PASSWORD_HASH` | None | Dummy password hash to prevent timing attacks |
 
 ### Full Configuration Options
 
