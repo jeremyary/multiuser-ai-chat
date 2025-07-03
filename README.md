@@ -128,6 +128,20 @@ graph LR
 - **Admin Oversight**: Admin-controlled room assignments
 </details>
 
+## 📱 Screenshots
+
+<div align="center">
+
+### Desktop Experience
+<img src="images/app-snapshot.png" alt="Desktop Chat Interface" width="800"/>
+
+### Mobile Experience  
+<img src="images/app-snapshot-mobile.png" alt="Mobile Chat Interface" width="300"/>
+
+*Real-time multi-user chat with AI integration, voice synthesis, and responsive design*
+
+</div>
+
 ## 🔧 Configuration
 
 ### Environment Variables
