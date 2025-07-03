@@ -1,0 +1,3285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat System - Authenticated Web Client</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background: #1e1e1e; color: #d4d4d4; height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 16px; height: 100%; }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px;
+            padding: 16px 0;
+        }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+        .header-actions { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+        }
+        .status { text-align: center; padding: 8px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .status.connecting { background: #f39c12; }
+        .status.connected { background: #27ae60; }
+        .status.disconnected { background: #e74c3c; }
+        
+        /* Login Form Styles */
+        .login-container { display: flex; justify-content: center; align-items: center; height: 80%; }
+        .login-form { background: #2d2d30; padding: 32px; border-radius: 12px; width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .login-form h2 { text-align: center; margin-bottom: 24px; color: #569cd6; font-weight: 600; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #3e3e42; border-radius: 6px; background: #1e1e1e; color: #d4d4d4; font-size: 14px; transition: border-color 0.2s; }
+        .form-group input:focus { outline: none; border-color: #569cd6; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: #0e639c; color: #ffffff; width: 100%; }
+        .btn-primary:hover { background: #1177bb; }
+        .error-message { color: #f48771; text-align: center; margin-top: 12px; font-size: 14px; }
+        
+        /* Chat Interface Styles */
+        .chat-container { display: none; height: calc(100vh - 120px); gap: 20px; }
+        .users-panel { width: 240px; background: #2d2d30; border-radius: 8px; padding: 20px; transition: transform 0.3s ease; }
+        .chat-panel { flex: 1; background: #2d2d30; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 16px;
+            width: 100%;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        
+        .mobile-menu-toggle:hover {
+            background: #1177bb;
+        }
+        
+        .mobile-menu-toggle:active {
+            transform: scale(0.98);
+        }
+        
+        /* Room Info - More streamlined */
+        .room-info {
+            background: #252528;
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .room-info h4 {
+            margin: 0 0 6px 0;
+            color: #d4d4d4;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .room-info .room-desc {
+            color: #9cdcfe;
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+        .room-info .room-prompt {
+            background: rgba(86, 156, 214, 0.1);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #9cdcfe;
+            border-left: 3px solid #569cd6;
+            max-height: 80px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .room-info .room-prompt::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .room-info .room-prompt::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+        
+        .room-info .room-prompt::-webkit-scrollbar-thumb {
+            background: rgba(86, 156, 214, 0.4);
+            border-radius: 2px;
+        }
+        
+        .room-info .room-prompt::-webkit-scrollbar-thumb:hover {
+            background: rgba(86, 156, 214, 0.6);
+        }
+        .room-info .room-prompt-label {
+            color: #569cd6;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        /* Modern message area - no borders, continuous flow */
+        .messages { 
+            flex: 1; 
+            background: transparent; 
+            padding: 20px 24px; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        /* Modern message styling with zebra striping */
+        .message { 
+            padding: 10px 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            position: relative;
+        }
+        
+        /* Gentle zebra striping */
+        .message:nth-child(even) {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        
+        .message:nth-child(odd) {
+            background: rgba(0, 0, 0, 0.01);
+        }
+        
+        .message:hover {
+            background: rgba(255, 255, 255, 0.04) !important;
+            margin: 0 -24px;
+            padding: 10px 24px;
+        }
+        
+        /* Special styling for AI (Styx) messages */
+        .message.ai-message {
+            background: rgba(86, 156, 214, 0.03);
+            border-left: 2px solid rgba(86, 156, 214, 0.3);
+            margin: 0 -24px;
+            margin-left: -26px;
+            padding: 10px 24px;
+            position: relative;
+        }
+        
+        .message.ai-message:nth-child(even) {
+            background: rgba(86, 156, 214, 0.04);
+        }
+        
+        .message.ai-message:nth-child(odd) {
+            background: rgba(86, 156, 214, 0.02);
+        }
+        
+        .message.ai-message:hover {
+            background: rgba(86, 156, 214, 0.08) !important;
+        }
+        
+        .message.ai-message .message-sender {
+            color: #9cdcfe !important;
+            font-weight: 700 !important;
+            text-shadow: 0 0 8px rgba(156, 220, 254, 0.3);
+        }
+        
+        .message.ai-message .message-content {
+            color: #dcdcaa;
+            font-style: italic;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        
+        .message-sender {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #6a6a6a;
+            font-weight: 400;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-left: 0;
+            word-wrap: break-word;
+        }
+        
+        /* Message type colors */
+        .message.user-message .message-sender { color: #569cd6; }
+        .message.ai-message .message-sender { color: #ce9178; }
+        .message.system-message .message-sender { color: #dcdcaa; }
+        .message.system-message { font-style: italic; opacity: 0.8; }
+        
+
+        
+        /* Side panel styling with better spacing */
+        #usersList { margin-top: 20px; }
+        #usersList div { 
+            padding: 10px 14px; 
+            margin-bottom: 3px; 
+            background: rgba(255, 255, 255, 0.05); 
+            border-radius: 6px; 
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        #usersList div:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Autocomplete Styles */
+        .input-wrapper { position: relative; }
+        .autocomplete-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .autocomplete-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            color: #d4d4d4;
+            font-size: 14px;
+        }
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: #0e639c;
+        }
+        
+
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+        }
+        
+        .modal-content {
+            background-color: #2d2d30;
+            margin: 10% auto;
+            padding: 24px;
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90vw;
+            color: #d4d4d4;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        
+        .modal h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #569cd6;
+            font-weight: 600;
+        }
+        
+        .modal input, .modal textarea, .modal select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #3e3e42;
+            border-radius: 6px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .modal input:focus, .modal textarea:focus, .modal select:focus {
+            outline: none;
+            border-color: #569cd6;
+        }
+        
+        .modal input::placeholder, .modal textarea::placeholder {
+            color: #6a6a6a;
+        }
+        
+        .modal-buttons {
+            text-align: right;
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .modal-buttons .btn-cancel {
+            background: #3e3e42;
+            color: #d4d4d4;
+        }
+        
+        .modal-buttons .btn-create, .modal-buttons .btn-edit, .modal-buttons .btn-reset, .modal-buttons .btn-delete {
+            background: #0e639c;
+            color: #ffffff;
+        }
+        
+        .modal-buttons .btn-delete {
+            background: #e74c3c;
+        }
+        
+        .modal-buttons button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        /* Toast Notification System */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            max-width: 400px;
+        }
+        
+        .toast {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            border-left-color: #e74c3c;
+            background: #2c3e50;
+        }
+        
+        .toast.success {
+            border-left-color: #27ae60;
+            background: #2c3e50;
+        }
+        
+        .toast.warning {
+            border-left-color: #f39c12;
+            background: #2c3e50;
+        }
+        
+        .toast.info {
+            border-left-color: #3498db;
+            background: #2c3e50;
+        }
+        
+        .toast-message {
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: #bdc3c7;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 10px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .toast-close:hover {
+            color: white;
+        }
+        
+        /* User Management Styles */
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #2c3e50;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+        
+        .user-item:hover {
+            background: #34495e;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: bold;
+            color: white;
+            margin-bottom: 4px;
+        }
+        
+        .user-details {
+            font-size: 12px;
+            color: #bdc3c7;
+        }
+        
+        .user-meta {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-top: 2px;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .user-actions button {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        
+        .user-actions button:hover {
+            opacity: 0.8;
+        }
+        
+        .btn-edit {
+            background: #3498db;
+        }
+        
+        .btn-reset {
+            background: #f39c12;
+        }
+        
+        .btn-delete {
+            background: #e74c3c;
+        }
+        
+        /* Rooms Styles - matching user list spacing */
+        .rooms-section {
+            margin-bottom: 20px;
+        }
+        
+        .rooms-section h3 {
+            margin-bottom: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #9cdcfe;
+            opacity: 0.9;
+        }
+        
+        .room-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .room-item.active {
+            background: #0e639c;
+            color: #ffffff;
+        }
+        
+        .room-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .room-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 14px;
+        }
+        
+        .room-description {
+            font-size: 12px;
+            opacity: 0.7;
+            line-height: 1.3;
+        }
+        
+        .room-settings {
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        
+        .create-room-btn {
+            width: 100%;
+            background: #0e639c;
+            color: #ffffff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        
+        .create-room-btn:hover {
+            background: #1177bb;
+        }
+        
+        /* Voice readback control */
+        .voice-control {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 1000;
+            transition: all 0.2s;
+        }
+        
+        .voice-control:hover {
+            background: #1177bb;
+            transform: scale(1.1);
+        }
+        
+        .voice-control.speaking {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 4px 12px rgba(14, 99, 156, 0.3); }
+            50% { box-shadow: 0 4px 20px rgba(14, 99, 156, 0.6); }
+            100% { box-shadow: 0 4px 12px rgba(14, 99, 156, 0.3); }
+        }
+        
+        /* Input area - preventing button wrap with table layout */
+        .input-area { 
+            padding: 20px 24px 24px 24px; 
+            background: #1e1e1e;
+        }
+        
+        .input-area .autocomplete-container { 
+            position: relative;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        .input-area .input-wrapper {
+            display: table-cell;
+            width: 100%;
+            padding-right: 12px;
+        }
+        
+        .input-area input { 
+            width: 100%;
+            padding: 12px 16px; 
+            border: 1px solid #3e3e42; 
+            border-radius: 20px; 
+            background: #2d2d30; 
+            color: #d4d4d4; 
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .input-area input:focus {
+            outline: none;
+            border-color: #569cd6;
+            box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.1);
+        }
+        
+        .input-area .button-wrapper {
+            display: table-cell;
+            width: 80px;
+            vertical-align: middle;
+        }
+        
+        .input-area button { 
+            background: #0e639c; 
+            color: #ffffff; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            white-space: nowrap;
+            width: 100%;
+        }
+        .input-area button:hover { 
+            background: #1177bb; 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .input-area button:disabled { 
+            background: #3e3e42; 
+            cursor: not-allowed; 
+            transform: none; 
+            box-shadow: none; 
+        }
+        #chatRoomsHeader {
+            margin: 0 0 10px 0;
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .container { 
+                padding: 8px; 
+                height: 100vh;
+            }
+            
+            .header { 
+                margin-bottom: 12px; 
+                padding: 8px 0;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .header h1 { 
+                font-size: 18px; 
+                order: 1;
+                flex: 1;
+            }
+            
+            .header-actions { 
+                gap: 8px;
+                order: 2;
+            }
+            
+            .header-actions .btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            /* Mobile Menu Toggle - Show on mobile */
+            .mobile-menu-toggle {
+                display: block;
+                order: 3;
+                width: 100%;
+                margin-top: 8px;
+                margin-bottom: 0;
+            }
+            
+            /* Mobile Layout */
+            .chat-container { 
+                height: calc(100vh - 100px); 
+                gap: 0;
+                position: relative;
+                flex-direction: column;
+            }
+            
+            /* Hide users panel by default on mobile */
+            .users-panel { 
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 1000;
+                transform: translateX(-100%);
+                border-radius: 0;
+                padding: 16px;
+                overflow-y: auto;
+                background: #2d2d30;
+            }
+            
+            .users-panel.mobile-open {
+                transform: translateX(0);
+            }
+            
+            /* Mobile overlay when menu is open */
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                display: none;
+            }
+            
+            .mobile-overlay.active {
+                display: block;
+            }
+            
+            /* Chat panel takes full width on mobile */
+            .chat-panel { 
+                width: 100%;
+                border-radius: 8px;
+                min-height: 0;
+            }
+            
+            /* Room info adjustments for mobile */
+            .room-info {
+                padding: 16px;
+            }
+            
+            .room-info h4 {
+                font-size: 16px;
+            }
+            
+            .room-info .room-desc {
+                font-size: 13px;
+            }
+            
+            .room-info .room-prompt {
+                font-size: 11px;
+                max-height: 60px;
+            }
+            
+            /* Messages area mobile optimizations */
+            .messages { 
+                padding: 16px; 
+                font-size: 16px; /* Larger for better mobile readability */
+            }
+            
+            .message { 
+                padding: 12px 0;
+                margin: 0 -16px;
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            
+            .message:hover {
+                margin: 0 -16px;
+                padding: 12px 16px;
+            }
+            
+            .message.ai-message {
+                margin: 0 -16px;
+                margin-left: -18px;
+                padding: 12px 16px;
+            }
+            
+            .message.ai-message:hover {
+                margin: 0 -16px;
+                margin-left: -18px;
+                padding: 12px 16px;
+            }
+            
+            .message-sender {
+                font-size: 15px;
+                font-weight: 700;
+            }
+            
+            .message-time {
+                font-size: 12px;
+            }
+            
+            .message-content {
+                font-size: 16px;
+                line-height: 1.6;
+                margin-top: 4px;
+            }
+            
+            /* Input area mobile optimizations */
+            .input-area {
+                padding: 16px;
+                background: #252528;
+            }
+            
+            .autocomplete-container {
+                gap: 8px;
+            }
+            
+            #messageInput {
+                padding: 16px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                border-radius: 8px;
+                min-height: 48px; /* Better touch target */
+            }
+            
+            #sendButton {
+                padding: 16px 20px;
+                font-size: 16px;
+                min-height: 48px; /* Better touch target */
+                min-width: 80px;
+                border-radius: 8px;
+            }
+            
+            /* Modal adjustments for mobile */
+            .modal-content {
+                margin: 5% auto;
+                width: 95vw;
+                max-width: 95vw;
+                padding: 20px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .modal h3 {
+                font-size: 18px;
+                margin-bottom: 16px;
+            }
+            
+            .modal input, .modal textarea, .modal select {
+                padding: 14px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                margin: 10px 0;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .modal-buttons button {
+                width: 100%;
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+            
+            /* Toast notifications mobile adjustments */
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+            
+            .toast {
+                margin-bottom: 8px;
+                padding: 12px 16px;
+            }
+            
+            .toast-message {
+                font-size: 15px;
+            }
+            
+            /* Login form mobile adjustments */
+            .login-form {
+                width: 95%;
+                max-width: 400px;
+                padding: 24px;
+            }
+            
+            .login-form h2 {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .form-group input {
+                padding: 14px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .btn-primary {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+            
+            /* Users list mobile optimizations */
+            #usersList div {
+                padding: 12px 16px;
+                font-size: 15px;
+                margin-bottom: 4px;
+            }
+            
+            /* Room list mobile optimizations */
+            .room-item {
+                padding: 12px 16px !important;
+                font-size: 15px !important;
+                margin-bottom: 4px !important;
+            }
+            
+            .create-room-btn {
+                padding: 12px 16px !important;
+                font-size: 15px !important;
+                min-height: 48px;
+            }
+            
+            /* Close button for mobile menu */
+            .mobile-menu-close {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                background: none;
+                border: none;
+                color: #d4d4d4;
+                font-size: 24px;
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 4px;
+                transition: background 0.2s;
+            }
+            
+            .mobile-menu-close:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+        
+        /* Tablet responsive adjustments */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .users-panel { 
+                width: 200px; 
+            }
+            
+            .container { 
+                padding: 12px; 
+            }
+            
+            .messages { 
+                padding: 18px; 
+            }
+            
+            .message-content {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>&nbsp;</h1>
+            <div class="header-actions" id="headerActions" style="display: none;">
+                <span id="currentUserName" style="color: #bdc3c7; font-size: 14px; margin-right: 10px;"></span>
+                <button onclick="showUserManagement()" id="userMgmtBtn" style="background: none; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 4px 8px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-right: 5px; display: none;">Users</button>
+                <button onclick="logout()" style="background: none; border: 1px solid #7f8c8d; color: #bdc3c7; padding: 4px 8px; font-size: 11px; border-radius: 3px; cursor: pointer;">Logout</button>
+            </div>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" style="display: none;">
+                <span id="mobileMenuText">☰ Rooms & Users</span>
+            </button>
+        </div>
+        
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileMenu()"></div>
+        
+        <div class="status" id="status" style="display: none;"></div>
+        
+        <!-- Login Form -->
+        <div class="login-container" id="loginContainer">
+            <div class="login-form">
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="login()">Login</button>
+                    <div class="error-message" id="errorMessage"></div>
+                </form>
+
+            </div>
+        </div>
+        
+        <!-- Chat Interface -->
+        <div class="chat-container" id="chatContainer">
+            <div class="users-panel" id="usersPanel">
+                <button class="mobile-menu-close" onclick="closeMobileMenu()" style="display: none;">×</button>
+                <h3 id="chatRoomsHeader">Chat Rooms</h3>
+                <div class="rooms-section">
+                    <div id="roomsList"></div>
+                    <button onclick="showCreateRoomModal()" class="create-room-btn">+ New Room</button>
+                </div>
+                
+                <h3>Online Users</h3>
+                <div id="usersList"></div>
+            </div>
+            <div class="chat-panel">
+                <div class="room-info" id="roomInfo" style="display: none;">
+                    <h4 id="roomInfoName">Room Name</h4>
+                    <div id="roomInfoDesc" class="room-desc"></div>
+                    <div id="roomInfoPrompt" class="room-prompt" style="display: none;">
+                        <div class="room-prompt-label">Custom AI Prompt:</div>
+                        <div id="roomInfoPromptText"></div>
+                    </div>
+                </div>
+                <div class="messages" id="messages"></div>
+                <div class="input-area">
+                    <div class="autocomplete-container">
+                        <div class="input-wrapper">
+                            <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+                            <input type="text" id="messageInput" placeholder="Type your message... | Try: @username to mention, !help for commands" disabled>
+                        </div>
+                        <div class="button-wrapper">
+                            <button onclick="sendMessage()" id="sendButton" disabled>Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Room Modal -->
+    <div id="createRoomModal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Room</h3>
+            <input type="text" id="newRoomName" placeholder="Room name (required)" />
+            <textarea id="newRoomDescription" placeholder="Room description (optional)" rows="2"></textarea>
+            <textarea id="newRoomPrompt" placeholder="AI System Prompt (optional) - Customize how Styx behaves in this room" rows="4"></textarea>
+            <select id="newRoomModel" style="width: 100%; padding: 10px; margin: 10px 0; border: none; border-radius: 4px; background: #2c3e50; color: white;">
+                <option value="">Loading models...</option>
+            </select>
+            <div style="margin: 10px 0;">
+                <label style="color: #bdc3c7; font-size: 14px; display: block; margin-bottom: 5px;">Voice (TTS):</label>
+                <select id="newRoomVoice" style="width: 100%; padding: 10px; border: none; border-radius: 4px; background: #2c3e50; color: white;">
+                    <option value="">Loading voices...</option>
+                </select>
+            </div>
+            
+            <!-- Admin-only private room section -->
+            <div id="adminRoomOptions" style="display: none; margin: 15px 0; padding: 15px; border: 1px solid #34495e; border-radius: 6px; background: rgba(52, 73, 94, 0.3);">
+                <div style="margin-bottom: 10px;">
+                    <label style="color: #bdc3c7; font-size: 14px; cursor: pointer;">
+                        <input type="checkbox" id="newRoomPrivate" style="margin-right: 8px; vertical-align: middle;">
+                        🔒 Make this a private room
+                    </label>
+                    <div style="font-size: 12px; color: #95a5a6; margin-top: 5px; margin-left: 20px;">
+                        Private rooms are only accessible to assigned users and admins
+                    </div>
+                </div>
+                
+                <div id="userAssignmentSection" style="display: none; margin-top: 15px;">
+                    <label style="color: #bdc3c7; font-size: 14px; display: block; margin-bottom: 8px; font-weight: 500;">Assign Users to Private Room:</label>
+                    <div id="userSelectionContainer" style="max-height: 120px; overflow-y: auto; border: 1px solid #34495e; border-radius: 4px; padding: 6px; background: #1a252f;">
+                        <div style="color: #95a5a6; font-size: 12px;">Loading users...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideCreateRoomModal()">Cancel</button>
+                <button class="btn-create" onclick="createRoom()">Create Room</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Room Settings Modal -->
+    <div id="roomSettingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Room Settings</h3>
+            <input type="text" id="editRoomName" placeholder="Room name" />
+            <textarea id="editRoomDescription" placeholder="Room description" rows="2"></textarea>
+            <textarea id="editRoomPrompt" placeholder="AI System Prompt - Customize how Styx behaves in this room" rows="4"></textarea>
+            <div style="margin: 10px 0;">
+                <label style="color: #bdc3c7; font-size: 14px; display: block; margin-bottom: 5px;">AI Model:</label>
+                <input type="text" id="editRoomModel" readonly style="width: 100%; padding: 10px; background: #1a252f; color: #95a5a6; border: 1px solid #34495e; cursor: not-allowed; border-radius: 4px;" />
+            </div>
+            <div style="margin: 10px 0;">
+                <label style="color: #bdc3c7; font-size: 14px; display: block; margin-bottom: 5px;">Voice (TTS):</label>
+                <select id="editRoomVoice" style="width: 100%; padding: 10px; border: none; border-radius: 4px; background: #2c3e50; color: white;">
+                    <option value="">Loading voices...</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideRoomSettingsModal()">Cancel</button>
+                <button class="btn-create" onclick="updateRoomSettings()">Save Changes</button>
+                <button class="btn-delete" onclick="deleteRoom()" id="deleteRoomBtn" style="background: #e74c3c; display: none;">Delete Room</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Management Modal -->
+    <div id="userManagementModal" class="modal">
+        <div class="modal-content" style="width: 600px; max-height: 80vh; overflow-y: auto;">
+            <h3>User Management</h3>
+            
+            <div style="margin-bottom: 20px; margin-top: 25px;">
+                <button onclick="showCreateUserForm()" style="background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">+ Create User</button>
+            </div>
+            
+            <div id="usersManagementList" style="max-height: 400px; overflow-y: auto;">
+                <div style="text-align: center; padding: 20px; color: #bdc3c7;">Loading users...</div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideUserManagement()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create/Edit User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <h3 id="userModalTitle">Create User</h3>
+            <input type="text" id="newUserUsername" placeholder="Username (required)" />
+            <input type="password" id="newUserPassword" placeholder="Password (required)" />
+            <select id="newUserRole" style="width: 100%; padding: 10px; margin: 10px 0; border: none; border-radius: 4px; background: #2c3e50; color: white;">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+            <div style="margin: 15px 0;">
+                <label style="color: #bdc3c7; font-size: 14px; cursor: pointer;">
+                    <input type="checkbox" id="newUserKidAccount" style="margin-right: 8px; vertical-align: middle;">
+                    👶 Kid Account (Restricted Access)
+                </label>
+                <div style="font-size: 12px; color: #95a5a6; margin-top: 5px; margin-left: 20px;">
+                    Kid accounts can only access private rooms they're assigned to
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hideCreateUserModal()">Cancel</button>
+                <button class="btn-create" onclick="saveUser()" id="saveUserBtn">Create User</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Password Reset Modal -->
+    <div id="passwordResetModal" class="modal">
+        <div class="modal-content">
+            <h3>Reset Password</h3>
+            <p id="resetPasswordUserInfo" style="color: #bdc3c7; margin-bottom: 15px;"></p>
+            <input type="password" id="newPasswordInput" placeholder="Enter new password" />
+            <input type="password" id="confirmPasswordInput" placeholder="Confirm new password" />
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="hidePasswordResetModal()">Cancel</button>
+                <button class="btn-create" onclick="confirmPasswordReset()">Reset Password</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let authToken = null;
+        let currentUser = null;
+        let isConnected = false;
+        let activeUsers = [];
+        let autocompleteVisible = false;
+        let selectedSuggestionIndex = -1;
+        
+        // Room management
+        let currentRoomId = 'general';
+        let currentRoomName = 'General Chat';
+        let availableRooms = [];
+        let currentEditingRoom = null;
+        let currentEditingUser = null;
+        let currentPasswordResetUserId = null;
+        let currentRoomVoiceReadback = false;
+        
+        // Text-to-speech functionality using ElevenLabs
+        let currentAudio = null;
+        let speechFallbackEnabled = true; // Fallback to Web Speech API if ElevenLabs fails
+        let currentSpeakingMessageId = null; // Track which message is currently being spoken
+        
+        async function speakText(text, messageId = null) {
+            if (!currentRoomVoiceReadback) {
+                return;
+            }
+            
+            // Stop any currently playing audio
+            stopSpeaking();
+            
+            // Track which message is currently being spoken
+            currentSpeakingMessageId = messageId;
+            
+            // Clean the text - remove HTML tags and markdown formatting
+            const cleanText = text
+                .replace(/<[^>]*>/g, '') // Remove HTML tags
+                .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **bold**
+                .replace(/\*(.*?)\*/g, '$1') // Remove *italic*
+                .replace(/`(.*?)`/g, '$1') // Remove `code`
+                .replace(/#{1,6}\s/g, '') // Remove markdown headers
+                .replace(/\n+/g, '. ') // Replace newlines with periods for natural pauses
+                .trim();
+            
+            if (!cleanText) return;
+            
+            showVoiceControl();
+            
+            try {
+                // Try ElevenLabs first
+                const success = await speakWithElevenLabs(cleanText);
+                if (!success && speechFallbackEnabled) {
+                    // Fallback to Web Speech API
+                    console.log('ElevenLabs failed, falling back to Web Speech API');
+                    speakWithWebSpeech(cleanText);
+                }
+            } catch (error) {
+                console.error('Error in speakText:', error);
+                if (speechFallbackEnabled) {
+                    speakWithWebSpeech(cleanText);
+                } else {
+                    hideVoiceControl();
+                }
+            }
+        }
+        
+        async function speakWithElevenLabs(text) {
+            try {
+                // Use relative URLs through nginx reverse proxy
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/tts/${currentRoomId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        text: text
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`TTS request failed: ${response.status}`);
+                }
+                
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                currentAudio = new Audio(audioUrl);
+                
+                // Set up event handlers
+                currentAudio.onended = function() {
+                    hideVoiceControl();
+                    hideMessageStopIcon(currentSpeakingMessageId);
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    currentSpeakingMessageId = null;
+                };
+                
+                currentAudio.onerror = function(e) {
+                    console.error('Audio playback error:', e);
+                    hideVoiceControl();
+                    hideMessageStopIcon(currentSpeakingMessageId);
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    currentSpeakingMessageId = null;
+                };
+                
+                // Play the audio
+                await currentAudio.play();
+                return true;
+                
+            } catch (error) {
+                console.error('ElevenLabs TTS error:', error);
+                return false;
+            }
+        }
+        
+        function speakWithWebSpeech(text) {
+            if (!window.speechSynthesis) {
+                hideVoiceControl();
+                return;
+            }
+            
+            const speechSynthesis = window.speechSynthesis;
+            
+            // Stop any currently speaking text
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+            
+            const speechUtterance = new SpeechSynthesisUtterance(text);
+            
+            // Configure speech settings
+            speechUtterance.rate = 0.9;
+            speechUtterance.pitch = 1.0;
+            speechUtterance.volume = 0.8;
+            
+            // Try to use a pleasant voice if available
+            const voices = speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => 
+                voice.name.includes('Female') || 
+                voice.name.includes('Google') ||
+                voice.name.includes('Natural') ||
+                voice.lang.startsWith('en')
+            );
+            
+            if (preferredVoice) {
+                speechUtterance.voice = preferredVoice;
+            }
+            
+            // Error handling
+            speechUtterance.onerror = function(event) {
+                console.warn('Web Speech API error:', event.error);
+                hideVoiceControl();
+                hideMessageStopIcon(currentSpeakingMessageId);
+                currentSpeakingMessageId = null;
+            };
+            
+            speechUtterance.onend = function() {
+                hideVoiceControl();
+                hideMessageStopIcon(currentSpeakingMessageId);
+                currentSpeakingMessageId = null;
+            };
+            
+            speechSynthesis.speak(speechUtterance);
+        }
+        
+        function stopSpeaking() {
+            // Hide stop icon for currently speaking message
+            if (currentSpeakingMessageId) {
+                hideMessageStopIcon(currentSpeakingMessageId);
+            }
+            
+            // Stop ElevenLabs audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            
+            // Stop Web Speech API
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            
+            hideVoiceControl();
+            currentSpeakingMessageId = null;
+        }
+        
+        function showVoiceControl() {
+            const voiceControl = document.getElementById('voiceControl');
+            if (voiceControl) {
+                voiceControl.classList.add('speaking');
+            }
+        }
+        
+        function hideVoiceControl() {
+            const voiceControl = document.getElementById('voiceControl');
+            if (voiceControl) {
+                voiceControl.classList.remove('speaking');
+            }
+        }
+        
+        function showMessageStopIcon(messageId) {
+            if (!messageId) return;
+            const stopIcon = document.querySelector(`[data-message-id="${messageId}"] .message-stop-icon`);
+            if (stopIcon) {
+                stopIcon.style.display = 'inline-block';
+                stopIcon.style.opacity = '1';
+                stopIcon.style.cursor = 'pointer';
+            }
+        }
+        
+        function hideMessageStopIcon(messageId) {
+            if (!messageId) return;
+            const stopIcon = document.querySelector(`[data-message-id="${messageId}"] .message-stop-icon`);
+            if (stopIcon) {
+                stopIcon.style.opacity = '0.3';
+                stopIcon.style.cursor = 'default';
+                // After a short delay, hide it completely
+                setTimeout(() => {
+                    if (stopIcon) {
+                        stopIcon.style.display = 'none';
+                    }
+                }, 1000);
+            }
+        }
+        
+        function stopMessageTTS(messageId) {
+            if (currentSpeakingMessageId === messageId) {
+                stopSpeaking();
+            }
+        }
+        
+        // Mobile menu functionality
+        function toggleMobileMenu() {
+            const usersPanel = document.getElementById('usersPanel');
+            const overlay = document.getElementById('mobileOverlay');
+            const menuText = document.getElementById('mobileMenuText');
+            
+            if (usersPanel.classList.contains('mobile-open')) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
+        }
+        
+        function openMobileMenu() {
+            const usersPanel = document.getElementById('usersPanel');
+            const overlay = document.getElementById('mobileOverlay');
+            const menuText = document.getElementById('mobileMenuText');
+            const closeBtn = usersPanel.querySelector('.mobile-menu-close');
+            
+            usersPanel.classList.add('mobile-open');
+            overlay.classList.add('active');
+            menuText.textContent = '× Close Menu';
+            
+            if (closeBtn) {
+                closeBtn.style.display = 'block';
+            }
+            
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeMobileMenu() {
+            const usersPanel = document.getElementById('usersPanel');
+            const overlay = document.getElementById('mobileOverlay');
+            const menuText = document.getElementById('mobileMenuText');
+            const closeBtn = usersPanel.querySelector('.mobile-menu-close');
+            
+            usersPanel.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            menuText.textContent = '☰ Rooms & Users';
+            
+            if (closeBtn) {
+                closeBtn.style.display = 'none';
+            }
+            
+            // Re-enable body scroll
+            document.body.style.overflow = '';
+        }
+        
+        // Close mobile menu when window is resized to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeMobileMenu();
+            }
+        });
+        
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            toast.innerHTML = `
+                <div class="toast-message">${message}</div>
+                <button class="toast-close" onclick="closeToast(this)">&times;</button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // Auto remove
+            setTimeout(() => {
+                closeToast(toast.querySelector('.toast-close'));
+            }, duration);
+        }
+        
+        function closeToast(closeBtn) {
+            const toast = closeBtn.parentElement;
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, 300);
+        }
+        
+        // Login functionality
+        document.getElementById("loginForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Form submitted, calling login function...");
+            await login();
+            return false;
+        });
+        
+        window.login = async function() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+            const errorDiv = document.getElementById("errorMessage");
+            
+            console.log("Attempting login for user:", username);
+            
+            if (!username || !password) {
+                errorDiv.textContent = "Please enter both username and password";
+                return;
+            }
+            
+            // Clear any previous error
+            errorDiv.textContent = "";
+            
+            try {
+                console.log("Making login request to backend...");
+                // Use relative URL to go through nginx reverse proxy
+                const response = await fetch(`/auth/login`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                console.log("Login response status:", response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("Login successful:", data.user.username);
+                    authToken = data.access_token;
+                    currentUser = data.user;
+                    
+                    // Hide login, show chat
+                    document.getElementById("loginContainer").style.display = "none";
+                    document.getElementById("chatContainer").style.display = "flex";
+                    document.getElementById("currentUserName").textContent = currentUser.username;
+                    document.getElementById("headerActions").style.display = "flex";
+                    
+                    // Show mobile menu toggle only on mobile devices
+                    const mobileToggle = document.querySelector('.mobile-menu-toggle');
+                    if (mobileToggle && window.innerWidth <= 768) {
+                        mobileToggle.style.display = 'block';
+                    }
+                    
+                    // Show user management button for admins only (hide completely for non-admins)
+                    if (currentUser.role === 'admin') {
+                        document.getElementById("userMgmtBtn").style.display = "inline-block";
+                    } else {
+                        document.getElementById("userMgmtBtn").style.display = "none";
+                    }
+                    
+                    // Hide Create Room button for kid users
+                    updateUIForUserPermissions();
+                    
+                    // Connect to WebSocket with connected status display
+                    connectWebSocket(true);
+                } else {
+                    console.log("Login failed with status:", response.status);
+                    let errorMessage = "Login failed";
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.detail || errorMessage;
+                    } catch (e) {
+                        console.log("Could not parse error response:", e);
+                    }
+                    errorDiv.textContent = errorMessage;
+                }
+            } catch (err) {
+                console.error("Login error:", err);
+                errorDiv.textContent = "Connection error: " + err.message;
+            }
+        };
+        
+        function connectWebSocket(showConnectedStatus = false) {
+            // Use nginx reverse proxy for WebSocket connection
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoomId}?token=${authToken}`;
+            
+            // Debug logging
+            console.log("Attempting WebSocket connection:");
+            console.log("- Protocol:", protocol);
+            console.log("- Host:", window.location.host);
+            console.log("- CurrentRoomId:", currentRoomId);
+            console.log("- AuthToken exists:", !!authToken);
+            console.log("- Full URL:", wsUrl);
+            
+            // Check if required variables are present
+            if (!authToken) {
+                console.error("Cannot connect WebSocket: authToken is missing");
+                return;
+            }
+            if (!currentRoomId) {
+                console.error("Cannot connect WebSocket: currentRoomId is missing");
+                return;
+            }
+            
+            // Only show connecting status if we're not switching rooms
+            if (!isSwitchingRooms) {
+                document.getElementById("status").textContent = "Connecting...";
+                document.getElementById("status").className = "status connecting";
+                document.getElementById("status").style.display = "block";
+            }
+            
+            console.log("Creating WebSocket with URL:", wsUrl);
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                isConnected = true;
+                document.getElementById("messageInput").disabled = false;
+                document.getElementById("sendButton").disabled = false;
+                
+                if (showConnectedStatus) {
+                    // Only show Connected status on initial login, not room switches
+                    document.getElementById("status").textContent = "Connected";
+                    document.getElementById("status").className = "status connected";
+                    document.getElementById("status").style.display = "block";
+                    
+                    // Auto-hide the connected status after 3 seconds since it's the normal state
+                    setTimeout(() => {
+                        if (isConnected) {
+                            document.getElementById("status").style.display = "none";
+                        }
+                    }, 3000);
+                } else {
+                    // For room switches, just hide the status immediately
+                    document.getElementById("status").style.display = "none";
+                }
+                
+                // Load rooms after successful connection
+                loadRooms();
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+            
+            ws.onclose = () => {
+                isConnected = false;
+                document.getElementById("messageInput").disabled = true;
+                document.getElementById("sendButton").disabled = true;
+                
+                // Only show disconnected status if we're not switching rooms or logging out
+                if (!isSwitchingRooms && !isLoggingOut) {
+                    document.getElementById("status").textContent = "Disconnected";
+                    document.getElementById("status").className = "status disconnected";
+                    document.getElementById("status").style.display = "block";
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                
+                // Only show connection error status if we're not switching rooms or logging out
+                if (!isSwitchingRooms && !isLoggingOut) {
+                    document.getElementById("status").textContent = "Connection error";
+                    document.getElementById("status").className = "status disconnected";
+                    document.getElementById("status").style.display = "block";
+                }
+            };
+        }
+        
+        function handleMessage(data) {
+            const msgType = data.type;
+            const msgData = data.data;
+            
+            console.log("Received message:", data);
+            
+            if (msgType === "message_received") {
+                // New real-time message - allow TTS
+                displayMessage(msgData);
+            } else if (msgType === "message_history") {
+                // Historical message - disable TTS to prevent multiple voices on reconnect
+                displayMessage(msgData, true);
+            } else if (msgType === "user_joined") {
+                // User joined events now include updated user list
+                console.log("User joined:", msgData.username);
+            } else if (msgType === "user_left") {
+                // User left events now include updated user list
+                console.log("User left:", msgData.username);
+            } else if (msgType === "connection_established") {
+                console.log("Connection established, active users:", msgData.active_users);
+                // No need to clear messages since historical messages are sent with separate event type
+                updateUsersList(msgData.active_users);
+            } else if (msgType === "user_list_updated") {
+                console.log("User list updated, active users:", msgData.active_users);
+                updateUsersList(msgData.active_users);
+            }
+        }
+        
+        // Color system for user identification
+        const userColors = [
+            '#e74c3c', // Red
+            '#3498db', // Blue
+            '#f39c12', // Orange
+            '#9b59b6', // Purple
+            '#2ecc71', // Green
+            '#e67e22', // Dark Orange
+            '#1abc9c', // Teal
+            '#8e44ad', // Dark Purple
+            '#34495e', // Dark Blue Gray
+            '#f1c40f', // Yellow
+            '#16a085', // Dark Teal
+            '#c0392b', // Dark Red
+            '#d35400', // Pumpkin
+            '#27ae60', // Dark Green
+            '#2980b9'  // Dark Blue
+        ];
+        
+        function getUserColor(username) {
+            // Special color for Styx (DM)
+            if (username === 'Styx' || username.includes('Styx') || username === 'Styx (DM)') {
+                return '#d4af37'; // Gold for DM
+            }
+            
+            // Simple hash function to assign colors deterministically
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = ((hash << 5) - hash + username.charCodeAt(i)) & 0xffffffff;
+            }
+            const index = Math.abs(hash) % userColors.length;
+            return userColors[index];
+        }
+
+        function displayMessage(message, skipTTS = false) {
+            const messagesDiv = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            
+            const time = new Date(message.timestamp).toLocaleTimeString('en-US', {
+                timeZone: 'America/Chicago',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            let className = "user-message";
+            let senderPrefix = "";
+            
+            // Check if this is a system message
+            if (message.message_type === "system") {
+                className = "system-message";
+                senderPrefix = "📢 ";
+            }
+            // Check if this is an AI message (Styx)
+            else if (message.sender_name === "Styx" || message.sender_name.includes("Styx") || 
+                     (message.sender_id && message.sender_id === 'ai_styx')) {
+                className = "ai-message";
+                senderPrefix = "🎲 ";
+            }
+            
+            messageElement.className = `message ${className}`;
+            messageElement.setAttribute('data-message-id', message.message_id);
+            
+            // Get user color for the sender (but AI messages will override this with CSS)
+            const senderColor = getUserColor(message.sender_name);
+            
+            // Create stop icon for TTS (only show for AI messages when TTS is enabled)
+            const isAIMessage = message.sender_name === "Styx" || message.sender_name.includes("Styx") || 
+                              (message.sender_id && message.sender_id === 'ai_styx');
+            const stopIconHtml = (isAIMessage && currentRoomVoiceReadback) ? 
+                `<span class="message-stop-icon" onclick="stopMessageTTS('${message.message_id}')" style="display: none; margin-left: 8px; color: #e74c3c; font-size: 12px; cursor: pointer; opacity: 0.7; user-select: none;" title="Stop voice readback">🛑</span>` : '';
+            
+            // Create modern message structure
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender" style="color: ${senderColor}; font-weight: 600;">${senderPrefix}${message.sender_name}</span>
+                    <span class="message-time">${time}${stopIconHtml}</span>
+                </div>
+                <div class="message-content">${message.content.replace(/\n/g, '<br>')}</div>
+            `;
+            
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Only trigger TTS for new AI messages, not when re-displaying message history
+            if (!skipTTS && 
+                (message.sender_name === "Styx" || message.sender_name.includes("Styx") || 
+                 (message.sender_id && message.sender_id === 'ai_styx')) && 
+                currentRoomVoiceReadback) {
+                
+                // Check if this is actually a recent message (within last 30 seconds)
+                const messageTimestamp = new Date(message.timestamp);
+                const messageAge = Date.now() - messageTimestamp.getTime();
+                const isRecentMessage = messageAge < 30000; // 30 seconds
+                
+                if (isRecentMessage) {
+                    // Small delay to ensure the message is displayed before speaking
+                    setTimeout(() => {
+                        speakText(message.content, message.message_id);
+                        // Show the stop icon for this message
+                        showMessageStopIcon(message.message_id);
+                    }, 100);
+                }
+            }
+        }
+        
+        function updateUsersList(users = []) {
+            // Store active users for autocomplete
+            activeUsers = users.filter(user => {
+                if (typeof user === 'string') {
+                    return true;
+                } else if (user && typeof user === 'object' && user.username) {
+                    return true;
+                }
+                return false;
+            }).map(user => {
+                if (typeof user === 'string') {
+                    return `User ${user}`;
+                } else {
+                    return user.username;
+                }
+            });
+            
+            const usersList = document.getElementById("usersList");
+            usersList.innerHTML = "";
+            
+            // Ensure Styx appears first, then sort others alphabetically
+            const styxUsers = [];
+            const otherUsers = [];
+            
+            users.forEach(user => {
+                const username = (typeof user === 'string') ? `User ${user}` : (user.username || 'Unknown');
+                if (username === 'Styx' || username.includes('Styx') || (user.user_id && user.user_id === 'ai_styx')) {
+                    styxUsers.push(user);
+                } else {
+                    otherUsers.push(user);
+                }
+            });
+            
+            // Sort other users alphabetically
+            otherUsers.sort((a, b) => {
+                const aName = (typeof a === 'string') ? `User ${a}` : (a.username || 'Unknown');
+                const bName = (typeof b === 'string') ? `User ${b}` : (b.username || 'Unknown');
+                return aName.localeCompare(bName);
+            });
+            
+            // Combine: Styx first, then others
+            const sortedUsers = [...styxUsers, ...otherUsers];
+            
+            sortedUsers.forEach((user, index) => {
+                const userElement = document.createElement("div");
+                
+                // Handle both old format (user ID strings) and new format (user objects)
+                let displayName;
+                if (typeof user === 'string') {
+                    displayName = `User ${user}`;
+                } else if (user && typeof user === 'object' && user.username) {
+                    displayName = user.username;
+                    // Add special styling for Styx (AI)
+                    if (user.username === 'Styx') {
+                        userElement.style.fontStyle = "italic";
+                        userElement.style.fontWeight = "bold";
+                        displayName = "🎲 Styx (DM)";
+                    }
+                } else {
+                    displayName = 'Unknown User';
+                }
+                
+                // Apply consistent user color
+                const userColor = getUserColor(displayName);
+                
+                userElement.textContent = displayName;
+                userElement.style.padding = "8px";
+                userElement.style.marginBottom = "5px";
+                userElement.style.background = "#2d2d30";
+                userElement.style.borderRadius = "6px";
+                userElement.style.color = userColor;
+                userElement.style.fontWeight = "600";
+                userElement.style.borderLeft = `3px solid ${userColor}`;
+                
+                // Override color for Styx to match chat message styling
+                if (user && typeof user === 'object' && user.username === 'Styx') {
+                    userElement.style.color = "#9cdcfe";
+                    userElement.style.borderLeft = "3px solid #9cdcfe";
+                }
+                userElement.style.transition = "background-color 0.2s ease";
+                
+                // Add hover effect
+                userElement.addEventListener('mouseenter', () => {
+                    userElement.style.backgroundColor = "#3e3e42";
+                });
+                userElement.addEventListener('mouseleave', () => {
+                    userElement.style.backgroundColor = "#2d2d30";
+                });
+                
+                usersList.appendChild(userElement);
+            });
+        }
+        
+        window.sendMessage = function() {
+            if (!ws || !isConnected) {
+                showToast("Not connected to chat server", "error");
+                return;
+            }
+            
+            const messageInput = document.getElementById("messageInput");
+            const content = messageInput.value.trim();
+            if (!content) return;
+            
+            console.log("Sending message:", content);
+            
+            const message = {
+                type: "send_message",
+                data: { content: content }
+            };
+            
+            ws.send(JSON.stringify(message));
+            messageInput.value = "";
+            hideAutocomplete();
+        };
+        
+        // Update UI elements based on user permissions
+        function updateUIForUserPermissions() {
+            if (!currentUser) return;
+            
+            const isKid = currentUser.is_kid_account || false;
+            const createRoomBtn = document.querySelector('.create-room-btn');
+            
+            if (createRoomBtn) {
+                if (isKid) {
+                    createRoomBtn.style.display = 'none';
+                } else {
+                    createRoomBtn.style.display = 'block';
+                }
+            }
+        }
+        
+        window.logout = function() {
+            // Set flag to prevent showing disconnected status during logout
+            isLoggingOut = true;
+            
+            if (ws) {
+                ws.close();
+            }
+            authToken = null;
+            currentUser = null;
+            document.getElementById("loginContainer").style.display = "flex";
+            document.getElementById("chatContainer").style.display = "none";
+            document.getElementById("headerActions").style.display = "none";
+            document.getElementById("status").style.display = "none";
+            
+            // Hide mobile menu toggle and close any open menu
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            if (mobileToggle) {
+                mobileToggle.style.display = 'none';
+            }
+            closeMobileMenu();
+            
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+            document.getElementById("errorMessage").textContent = "";
+            
+            // Reset logout flag after a short delay
+            setTimeout(() => {
+                isLoggingOut = false;
+            }, 100);
+        };
+        
+        // Autocomplete functionality
+        function initializeAutocomplete() {
+            const messageInput = document.getElementById("messageInput");
+            const dropdown = document.getElementById("autocompleteDropdown");
+            
+            messageInput.addEventListener("input", handleAutocompleteInput);
+            messageInput.addEventListener("keydown", handleAutocompleteKeydown);
+            messageInput.addEventListener("blur", () => setTimeout(hideAutocomplete, 150));
+        }
+        
+        function handleAutocompleteInput(e) {
+            const input = e.target;
+            const value = input.value;
+            const cursorPos = input.selectionStart;
+            
+            // Find the last @ before cursor position
+            const beforeCursor = value.substring(0, cursorPos);
+            const lastAtIndex = beforeCursor.lastIndexOf('@');
+            
+            if (lastAtIndex === -1) {
+                hideAutocomplete();
+                return;
+            }
+            
+            // Check if there's a space after the @ (which would end the mention)
+            const afterAt = beforeCursor.substring(lastAtIndex + 1);
+            if (afterAt.includes(' ')) {
+                hideAutocomplete();
+                return;
+            }
+            
+            // Get the partial username
+            const partial = afterAt.toLowerCase();
+            
+            // Filter matching users
+            const matches = activeUsers.filter(user => 
+                user.toLowerCase().startsWith(partial)
+            );
+            
+            if (matches.length > 0) {
+                showAutocomplete(matches, lastAtIndex, partial);
+            } else {
+                hideAutocomplete();
+            }
+        }
+        
+        function handleAutocompleteKeydown(e) {
+            if (!autocompleteVisible) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    sendMessage();
+                }
+                return;
+            }
+            
+            const dropdown = document.getElementById("autocompleteDropdown");
+            const items = dropdown.querySelectorAll(".autocomplete-item");
+            
+            switch (e.key) {
+                case "ArrowDown":
+                    e.preventDefault();
+                    selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, items.length - 1);
+                    updateSelection();
+                    break;
+                    
+                case "ArrowUp":
+                    e.preventDefault();
+                    selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+                    updateSelection();
+                    break;
+                    
+                case "Tab":
+                case "Enter":
+                    e.preventDefault();
+                    if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+                        selectUser(items[selectedSuggestionIndex].textContent);
+                    } else if (items.length > 0) {
+                        selectUser(items[0].textContent);
+                    }
+                    break;
+                    
+                case "Escape":
+                    e.preventDefault();
+                    hideAutocomplete();
+                    break;
+                    
+                default:
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+            }
+        }
+        
+        function showAutocomplete(matches, atIndex, partial) {
+            const dropdown = document.getElementById("autocompleteDropdown");
+            dropdown.innerHTML = "";
+            
+            matches.forEach((user, index) => {
+                const item = document.createElement("div");
+                item.className = "autocomplete-item";
+                item.textContent = user;
+                
+                // Apply user color to autocomplete items too
+                const userColor = getUserColor(user);
+                item.style.color = userColor;
+                item.style.fontWeight = "600";
+                
+                // Override color for Styx to match chat message styling
+                if (user === 'Styx' || user === '🎲 Styx (DM)') {
+                    item.style.color = "#9cdcfe";
+                }
+                
+                item.addEventListener("click", () => selectUser(user));
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.style.display = "block";
+            autocompleteVisible = true;
+            selectedSuggestionIndex = -1;
+            
+            // Store the @ position for completion
+            dropdown.dataset.atIndex = atIndex;
+            dropdown.dataset.partial = partial;
+        }
+        
+        function hideAutocomplete() {
+            const dropdown = document.getElementById("autocompleteDropdown");
+            dropdown.style.display = "none";
+            autocompleteVisible = false;
+            selectedSuggestionIndex = -1;
+        }
+        
+        function updateSelection() {
+            const dropdown = document.getElementById("autocompleteDropdown");
+            const items = dropdown.querySelectorAll(".autocomplete-item");
+            
+            items.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.classList.add("selected");
+                } else {
+                    item.classList.remove("selected");
+                }
+            });
+        }
+        
+        function selectUser(username) {
+            const input = document.getElementById("messageInput");
+            const dropdown = document.getElementById("autocompleteDropdown");
+            const atIndex = parseInt(dropdown.dataset.atIndex);
+            const partial = dropdown.dataset.partial;
+            
+            const value = input.value;
+            const beforeAt = value.substring(0, atIndex);
+            const afterPartial = value.substring(atIndex + 1 + partial.length);
+            
+            // Replace the partial mention with the complete username
+            const newValue = beforeAt + '@' + username + ' ' + afterPartial;
+            input.value = newValue;
+            
+            // Set cursor position after the completed mention
+            const newCursorPos = atIndex + username.length + 2; // +2 for @ and space
+            input.setSelectionRange(newCursorPos, newCursorPos);
+            
+            hideAutocomplete();
+            input.focus();
+        }
+        
+        // Initialize autocomplete when WebSocket connects
+        function enhanceMessageInput() {
+            initializeAutocomplete();
+        }
+        
+        // Handle window resize to show/hide mobile menu toggle appropriately
+        window.addEventListener('resize', function() {
+            const mobileToggle = document.querySelector('.mobile-menu-toggle');
+            if (mobileToggle && currentUser) { // Only if user is logged in
+                if (window.innerWidth <= 768) {
+                    mobileToggle.style.display = 'block';
+                } else {
+                    mobileToggle.style.display = 'none';
+                    closeMobileMenu(); // Close menu if open when switching to desktop
+                }
+            }
+        });
+        
+        // Enter key support
+        document.getElementById("messageInput").addEventListener("keypress", (e) => {
+            if (e.key === "Enter" && !autocompleteVisible) {
+                sendMessage();
+            }
+        });
+        
+        document.getElementById("password").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") login();
+        });
+        
+        // Initialize autocomplete when page loads
+        document.addEventListener("DOMContentLoaded", enhanceMessageInput);
+        
+        // Room Management Functions
+        async function loadRooms() {
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const response = await fetch(`${backendUrl}/rooms`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableRooms = data.rooms;
+                    
+                    // Debug logging for kid account room access
+                    if (currentUser && currentUser.is_kid_account) {
+                        console.log("🔍 Kid account room debugging:");
+                        console.log("- User:", currentUser.username);
+                        console.log("- Is kid account:", currentUser.is_kid_account);
+                        console.log("- Available rooms count:", availableRooms.length);
+                        console.log("- Room details:");
+                        availableRooms.forEach(room => {
+                            console.log(`  • ${room.room_name} (${room.room_id}) - Private: ${room.is_private}, Assigned: [${room.assigned_users?.join(', ') || 'none'}]`);
+                        });
+                    }
+                    
+                    updateRoomsList();
+                    
+                    // Update room info display for current room
+                    const currentRoom = availableRooms.find(r => r.room_id === currentRoomId);
+                    updateRoomInfoDisplay(currentRoom);
+                } else {
+                    console.error("Failed to load rooms:", response.status);
+                }
+            } catch (err) {
+                console.error("Error loading rooms:", err);
+            }
+        }
+        
+        function updateRoomsList() {
+            const roomsList = document.getElementById("roomsList");
+            roomsList.innerHTML = "";
+            
+            // Sort rooms: default room first, then alphabetically
+            const sortedRooms = [...availableRooms].sort((a, b) => {
+                // Default room (general) always goes first
+                if (a.room_id === "general") return -1;
+                if (b.room_id === "general") return 1;
+                
+                // Sort other rooms alphabetically by name
+                return a.room_name.localeCompare(b.room_name);
+            });
+            
+            sortedRooms.forEach(room => {
+                const roomElement = document.createElement("div");
+                roomElement.className = `room-item ${room.room_id === currentRoomId ? 'active' : ''}`;
+                
+                // Create TTS toggle button
+                const ttsBtn = document.createElement("button");
+                const ttsEnabled = room.voice_readback_enabled || false;
+                ttsBtn.innerHTML = ttsEnabled ? "🔊" : "🔇";
+                ttsBtn.className = "room-tts-btn";
+                const isActive = room.room_id === currentRoomId;
+                const ttsColor = ttsEnabled ? (isActive ? "#00ff00" : "#00cc00") : (isActive ? "#ffffff" : "#9cdcfe");
+                ttsBtn.style.cssText = `background: none; border: none; color: ${ttsColor}; cursor: pointer; font-size: 14px; transition: color 0.2s; margin-right: 4px;`;
+                ttsBtn.title = ttsEnabled ? "Disable voice readback" : "Enable voice readback";
+                ttsBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleRoomTTS(room.room_id, !ttsEnabled);
+                };
+                
+                // Add hover effect for TTS button
+                ttsBtn.onmouseenter = () => {
+                    ttsBtn.style.color = ttsEnabled ? "#00ff00" : (isActive ? "#ecf0f1" : "#ffffff");
+                };
+                ttsBtn.onmouseleave = () => {
+                    ttsBtn.style.color = ttsColor;
+                };
+                
+                // Create settings button
+                const settingsBtn = document.createElement("button");
+                settingsBtn.innerHTML = "⚙️";
+                settingsBtn.className = "room-settings-btn";
+                const btnColor = isActive ? "#ffffff" : "#9cdcfe";
+                settingsBtn.style.cssText = `background: none; border: none; color: ${btnColor}; cursor: pointer; font-size: 14px; transition: color 0.2s;`;
+                settingsBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showRoomSettings(room.room_id);
+                };
+                
+                // Add hover effect for settings button
+                settingsBtn.onmouseenter = () => {
+                    settingsBtn.style.color = isActive ? "#ecf0f1" : "#ffffff";
+                };
+                settingsBtn.onmouseleave = () => {
+                    settingsBtn.style.color = btnColor;
+                };
+                
+                // Add private room indicator
+                const privateIndicator = room.is_private ? '🔒 ' : '';
+                
+                roomElement.innerHTML = `
+                    <div class="room-content">
+                        <div class="room-name">${privateIndicator}${room.room_name}</div>
+                        ${room.description ? `<div class="room-description">${room.description}</div>` : ''}
+                    </div>
+                `;
+                
+                const settingsContainer = document.createElement("div");
+                settingsContainer.className = "room-settings";
+                settingsContainer.appendChild(ttsBtn);
+                settingsContainer.appendChild(settingsBtn);
+                roomElement.appendChild(settingsContainer);
+                
+                roomElement.onclick = () => switchToRoom(room.room_id, room.room_name, room);
+                roomsList.appendChild(roomElement);
+            });
+        }
+        
+        let isSwitchingRooms = false;
+        let isLoggingOut = false;
+        
+        async function switchToRoom(roomId, roomName, roomData = null) {
+            if (roomId === currentRoomId) return;
+            
+            // Close mobile menu on room switch (mobile UX improvement)
+            closeMobileMenu();
+            
+            // Set flag to prevent showing disconnected status during room switch
+            isSwitchingRooms = true;
+            
+            // Update current room
+            currentRoomId = roomId;
+            currentRoomName = roomName;
+            
+            // Clear messages
+            document.getElementById("messages").innerHTML = "";
+            
+            // Update UI
+            updateRoomsList();
+            
+            // Update room info display
+            updateRoomInfoDisplay(roomData || availableRooms.find(r => r.room_id === roomId));
+            
+            // Close current WebSocket and wait a moment for cleanup
+            if (ws) {
+                ws.close();
+                // Small delay to allow connection cleanup
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Reconnect WebSocket to new room (don't show connected status for room switches)
+            connectWebSocket(false);
+            
+            // Reset flag after connection attempt
+            setTimeout(() => {
+                isSwitchingRooms = false;
+            }, 1000);
+        }
+        
+        function updateRoomInfoDisplay(room) {
+            const roomInfo = document.getElementById("roomInfo");
+            const roomInfoName = document.getElementById("roomInfoName");
+            const roomInfoDesc = document.getElementById("roomInfoDesc");
+            const roomInfoPrompt = document.getElementById("roomInfoPrompt");
+            const roomInfoPromptText = document.getElementById("roomInfoPromptText");
+            
+            if (!room) {
+                roomInfo.style.display = "none";
+                currentRoomVoiceReadback = false;
+                return;
+            }
+            
+            roomInfoName.textContent = room.room_name;
+            
+            // Update voice readback setting for current room
+            currentRoomVoiceReadback = room.voice_readback_enabled || false;
+            
+            // Add visual indicator for voice readback
+            if (currentRoomVoiceReadback) {
+                if (!roomInfoName.textContent.includes('🔊')) {
+                    roomInfoName.textContent = room.room_name + ' 🔊';
+                }
+            } else {
+                roomInfoName.textContent = room.room_name;
+            }
+            
+            // Show description if it exists
+            if (room.description && room.description.trim()) {
+                roomInfoDesc.textContent = room.description;
+                roomInfoDesc.style.display = "block";
+            } else {
+                roomInfoDesc.style.display = "none";
+            }
+            
+            // Show custom AI prompt if it exists
+            if (room.ai_system_prompt && room.ai_system_prompt.trim()) {
+                roomInfoPromptText.textContent = room.ai_system_prompt;
+                roomInfoPrompt.style.display = "block";
+            } else {
+                roomInfoPrompt.style.display = "none";
+            }
+            
+            // Always show room info panel (room name should always be visible)
+            roomInfo.style.display = "block";
+        }
+        
+        window.showCreateRoomModal = async function() {
+            // Prevent kid users from creating rooms
+            if (currentUser && currentUser.is_kid_account) {
+                showToast("Kid accounts cannot create rooms", "error");
+                return;
+            }
+            
+            document.getElementById("createRoomModal").style.display = "block";
+            document.getElementById("newRoomName").value = "";
+            document.getElementById("newRoomDescription").value = "";
+            document.getElementById("newRoomPrompt").value = "";
+            
+            // Reset private room options
+            document.getElementById("newRoomPrivate").checked = false;
+            document.getElementById("userAssignmentSection").style.display = "none";
+            
+            // Show admin options if user is admin
+            const adminOptions = document.getElementById("adminRoomOptions");
+            if (currentUser && currentUser.role === 'admin') {
+                adminOptions.style.display = "block";
+                await loadUsersForAssignment();
+            } else {
+                adminOptions.style.display = "none";
+            }
+            
+            // Load available models and voices
+            await Promise.all([
+                loadAvailableModels(),
+                loadAvailableVoicesForCreate()
+            ]);
+        }
+        
+        // Store available models for mapping
+        let availableModels = [];
+        
+        // Store available voices for TTS
+        let availableVoices = [];
+        
+        async function loadAvailableModels() {
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const response = await fetch(`${backendUrl}/models`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableModels = data.models; // Store for later use
+                    const modelSelect = document.getElementById("newRoomModel");
+                    modelSelect.innerHTML = "";
+                    
+                    // Add default option
+                    const defaultOption = document.createElement("option");
+                    defaultOption.value = "";
+                    defaultOption.textContent = "Select AI Model (required)";
+                    modelSelect.appendChild(defaultOption);
+                    
+                    // Add available models
+                    data.models.forEach(model => {
+                        const option = document.createElement("option");
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                } else {
+                    console.error("Failed to load models");
+                    const modelSelect = document.getElementById("newRoomModel");
+                    modelSelect.innerHTML = '<option value="">Error loading models</option>';
+                }
+            } catch (err) {
+                console.error("Error loading models:", err);
+                const modelSelect = document.getElementById("newRoomModel");
+                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+            }
+        }
+        
+        async function loadAvailableVoices() {
+            try {
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/tts/voices`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableVoices = data.voices || []; // Store for later use
+                    console.log("Loaded voices:", availableVoices);
+                    return true;
+                } else {
+                    console.error("Failed to load voices");
+                    availableVoices = [];
+                    return false;
+                }
+            } catch (err) {
+                console.error("Error loading voices:", err);
+                availableVoices = [];
+                return false;
+            }
+        }
+        
+        async function loadAvailableVoicesForCreate() {
+            try {
+                const success = await loadAvailableVoices(); // Reuse existing function
+                
+                const voiceSelect = document.getElementById("newRoomVoice");
+                voiceSelect.innerHTML = "";
+                
+                if (success && availableVoices.length > 0) {
+                    // Add default option first
+                    availableVoices.forEach(voice => {
+                        const option = document.createElement("option");
+                        option.value = voice.voice_id;
+                        option.textContent = voice.name;
+                        if (voice.voice_id === "N2lVS1w4EtoT3dr4eOWO") {
+                            option.textContent += " (Default)";
+                            option.selected = true;
+                        }
+                        voiceSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement("option");
+                    option.value = "N2lVS1w4EtoT3dr4eOWO";
+                    option.textContent = "Callum (Default)";
+                    option.selected = true;
+                    voiceSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error("Error loading voices for create:", error);
+                // Fallback to default voice
+                const voiceSelect = document.getElementById("newRoomVoice");
+                voiceSelect.innerHTML = '<option value="N2lVS1w4EtoT3dr4eOWO" selected>Callum (Default)</option>';
+            }
+        }
+        
+        // Load users for room assignment (admin only)
+        async function loadUsersForAssignment() {
+            try {
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/users`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const users = data.users || [];
+                    
+                    const container = document.getElementById("userSelectionContainer");
+                    container.innerHTML = "";
+                    
+                    if (users.length === 0) {
+                        container.innerHTML = '<div style="color: #95a5a6; font-size: 12px;">No users found</div>';
+                        return;
+                    }
+                    
+                    users.forEach(user => {
+                        const userDiv = document.createElement("div");
+                        userDiv.style.cssText = "margin: 4px 0; padding: 8px; background: rgba(52, 73, 94, 0.5); border-radius: 4px; border: 1px solid #34495e; display: flex; align-items: center;";
+                        
+                        userDiv.innerHTML = `
+                            <input type="checkbox" value="${user.id}" id="user_${user.id}" style="margin-right: 6px;">
+                            <label for="user_${user.id}" style="color: #bdc3c7; font-size: 13px; cursor: pointer;">
+                                <strong>${user.username}</strong>
+                                ${user.full_name ? ` (${user.full_name})` : ''}
+                                <span style="font-size: 11px; color: #95a5a6; margin-left: 8px;">
+                                    ${user.role}${user.is_kid_account ? ' • 👶 Kid' : ''}
+                                </span>
+                            </label>
+                        `;
+                        
+                        container.appendChild(userDiv);
+                    });
+                } else {
+                    console.error("Failed to load users, status:", response.status);
+                    const errorText = await response.text();
+                    console.error("Error response:", errorText);
+                    document.getElementById("userSelectionContainer").innerHTML = 
+                        '<div style="color: #e74c3c; font-size: 12px;">Failed to load users</div>';
+                }
+            } catch (error) {
+                console.error("Error loading users:", error);
+                document.getElementById("userSelectionContainer").innerHTML = 
+                    '<div style="color: #e74c3c; font-size: 12px;">Error loading users</div>';
+            }
+        }
+
+        // Handle private room checkbox change
+        document.addEventListener('DOMContentLoaded', function() {
+            const privateCheckbox = document.getElementById('newRoomPrivate');
+            const userAssignmentSection = document.getElementById('userAssignmentSection');
+            
+            if (privateCheckbox) {
+                privateCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        userAssignmentSection.style.display = 'block';
+                    } else {
+                        userAssignmentSection.style.display = 'none';
+                        // Uncheck all user checkboxes
+                        const userCheckboxes = document.querySelectorAll('#userSelectionContainer input[type="checkbox"]');
+                        userCheckboxes.forEach(cb => cb.checked = false);
+                    }
+                });
+            }
+        });
+        
+        // Helper function to get voice friendly name from ID
+        function getVoiceName(voiceId) {
+            if (!voiceId) {
+                return "Default Voice (Callum)";
+            }
+            
+            const voice = availableVoices.find(v => v.id === voiceId);
+            return voice ? voice.name : `Unknown Voice (${voiceId})`;
+        }
+        
+        // Helper function to get model friendly name from ID
+        function getModelName(modelId) {
+            console.log("getModelName called with:", modelId);
+            console.log("availableModels:", availableModels);
+            
+            if (!modelId || modelId === null) {
+                console.log("Returning 'No Model Assigned' for null/empty modelId");
+                return "No Model Assigned";
+            }
+            
+            const model = availableModels.find(m => m.id === modelId);
+            const result = model ? model.name : `Unknown Model (${modelId})`;
+            console.log("getModelName result:", result);
+            return result;
+        }
+        
+        window.hideCreateRoomModal = function() {
+            document.getElementById("createRoomModal").style.display = "none";
+            // Clear the form
+            document.getElementById("newRoomName").value = "";
+            document.getElementById("newRoomDescription").value = "";
+            document.getElementById("newRoomPrompt").value = "";
+        }
+        
+        window.createRoom = async function() {
+            const roomName = document.getElementById("newRoomName").value.trim();
+            const description = document.getElementById("newRoomDescription").value.trim();
+            const aiPrompt = document.getElementById("newRoomPrompt").value.trim();
+            const aiModel = document.getElementById("newRoomModel").value;
+            let voiceId = document.getElementById("newRoomVoice").value;
+            const isPrivate = document.getElementById("newRoomPrivate").checked;
+            
+            // Safety check for voice_id - ensure it's never undefined, empty, or the string "undefined"
+            if (!voiceId || voiceId === "undefined" || voiceId.trim() === "") {
+                voiceId = "N2lVS1w4EtoT3dr4eOWO"; // Default voice
+            }
+            
+            if (!roomName) {
+                showToast("Room name is required", "warning");
+                return;
+            }
+            
+            if (!aiModel) {
+                showToast("Please select an AI model for this room", "warning");
+                return;
+            }
+            
+            // Get assigned users if private room
+            let assignedUsers = [];
+            if (isPrivate) {
+                const userCheckboxes = document.querySelectorAll('#userSelectionContainer input[type="checkbox"]:checked');
+                assignedUsers = Array.from(userCheckboxes).map(cb => cb.value);
+                
+                if (assignedUsers.length === 0) {
+                    showToast("Please assign at least one user to the private room", "warning");
+                    return;
+                }
+            }
+            
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const response = await fetch(`${backendUrl}/rooms`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        room_name: roomName,
+                        description: description || null,
+                        ai_system_prompt: aiPrompt || null,
+                        ai_model: aiModel,
+                        voice_id: voiceId,  // Now guaranteed to be valid
+                        is_private: isPrivate,
+                        assigned_users: assignedUsers
+                        // voice_readback_enabled now defaults to true in backend
+                    })
+                });
+                
+                if (response.ok) {
+                    const newRoom = await response.json();
+                    hideCreateRoomModal();
+                    await loadRooms();
+                    // Switch to the new room
+                    switchToRoom(newRoom.room_id, newRoom.room_name);
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to create room: ${error.detail}`, "error");
+                }
+            } catch (err) {
+                console.error("Error creating room:", err);
+                showToast("Error creating room: " + err.message, "error");
+            }
+        }
+        
+        async function showRoomSettings(roomId) {
+            console.log("showRoomSettings called with roomId:", roomId);
+            console.log("availableRooms:", availableRooms);
+            
+            const room = availableRooms.find(r => r.room_id === roomId);
+            console.log("Found room:", room);
+            
+            if (!room) {
+                console.error("Room not found in availableRooms for roomId:", roomId);
+                showToast("Room not found. Please refresh the page and try again.", "error");
+                return;
+            }
+            
+            currentEditingRoom = room;
+            console.log("Set currentEditingRoom to:", currentEditingRoom);
+            
+            // Load available models if not already loaded (needed for model name display)
+            if (availableModels.length === 0) {
+                await loadAvailableModels();
+            }
+            
+            // Load available voices if not already loaded
+            if (availableVoices.length === 0) {
+                await loadAvailableVoices();
+            }
+            
+            // Populate the voice dropdown
+            const voiceSelect = document.getElementById("editRoomVoice");
+            voiceSelect.innerHTML = "";
+            
+            // Add default option
+            const defaultOption = document.createElement("option");
+            defaultOption.value = "N2lVS1w4EtoT3dr4eOWO";
+            defaultOption.textContent = "Callum (Default)";
+            voiceSelect.appendChild(defaultOption);
+            
+            // Add available voices
+            availableVoices.forEach(voice => {
+                if (voice.id !== "N2lVS1w4EtoT3dr4eOWO") { // Don't duplicate the default
+                    const option = document.createElement("option");
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    voiceSelect.appendChild(option);
+                }
+            });
+            
+            // Set selected voice
+            voiceSelect.value = room.voice_id || "N2lVS1w4EtoT3dr4eOWO";
+            
+            document.getElementById("editRoomName").value = room.room_name;
+            document.getElementById("editRoomDescription").value = room.description || "";
+            document.getElementById("editRoomPrompt").value = room.ai_system_prompt || "";
+            document.getElementById("editRoomModel").value = getModelName(room.ai_model);
+            
+            // Show delete button only for admin and not for the default room
+            const deleteBtn = document.getElementById("deleteRoomBtn");
+            console.log("Delete check - Room ID:", room.room_id, "Room Name:", room.room_name);
+            console.log("Current User:", currentUser);
+            console.log("Is Admin:", currentUser?.role === 'admin', "Role:", currentUser?.role);
+            
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            const isNotDefaultRoom = room.room_id !== 'general' && room.room_name !== 'General Chat';
+            
+            console.log("Final checks - Is Admin:", isAdmin, "Not Default Room:", isNotDefaultRoom);
+            
+            if (isAdmin && isNotDefaultRoom) {
+                deleteBtn.style.display = "inline-block";
+                console.log("Showing delete button");
+            } else {
+                deleteBtn.style.display = "none";
+                console.log("Hiding delete button");
+            }
+            
+            document.getElementById("roomSettingsModal").style.display = "block";
+        }
+        
+        window.hideRoomSettingsModal = function() {
+            console.log("hideRoomSettingsModal called - clearing currentEditingRoom");
+            document.getElementById("roomSettingsModal").style.display = "none";
+            currentEditingRoom = null;
+        }
+        
+        window.updateRoomSettings = async function() {
+            if (!currentEditingRoom) return;
+            
+            // Store room data locally to avoid issues if currentEditingRoom gets cleared
+            const roomBeingEdited = {
+                room_id: currentEditingRoom.room_id,
+                room_name: currentEditingRoom.room_name
+            };
+            
+            const roomName = document.getElementById("editRoomName").value.trim();
+            const description = document.getElementById("editRoomDescription").value.trim();
+            const aiPrompt = document.getElementById("editRoomPrompt").value.trim();
+            const voiceId = document.getElementById("editRoomVoice").value;
+            
+            if (!roomName) {
+                showToast("Room name is required", "warning");
+                return;
+            }
+            
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const response = await fetch(`${backendUrl}/rooms/${roomBeingEdited.room_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        room_name: roomName,
+                        description: description || null,
+                        ai_system_prompt: aiPrompt || null,
+                        voice_id: voiceId || "N2lVS1w4EtoT3dr4eOWO"
+                    })
+                });
+                
+                if (response.ok) {
+                    hideRoomSettingsModal();
+                    await loadRooms();
+                    
+                    // Update current room name if editing current room
+                    if (roomBeingEdited.room_id === currentRoomId) {
+                        currentRoomName = roomName;
+                    }
+                    
+                    showToast(`Room "${roomName}" updated successfully`, "success");
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to update room: ${error.detail}`, "error");
+                }
+            } catch (err) {
+                console.error("Error updating room:", err);
+                showToast("Error updating room: " + err.message, "error");
+            }
+        }
+
+        // Toggle TTS for a specific room
+        async function toggleRoomTTS(roomId, enabled) {
+            try {
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/rooms/${roomId}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        voice_readback_enabled: enabled
+                    })
+                });
+                
+                if (response.ok) {
+                    // Refresh rooms list to update UI
+                    await loadRooms();
+                    
+                    // Update current room voice readback if this is the current room
+                    if (roomId === currentRoomId) {
+                        currentRoomVoiceReadback = enabled;
+                        // Update room info display
+                        const room = availableRooms.find(r => r.room_id === roomId);
+                        updateRoomInfoDisplay(room);
+                    }
+                    
+                    const status = enabled ? "enabled" : "disabled";
+                    showToast(`Voice readback ${status}`, "success");
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to update voice readback: ${error.detail}`, "error");
+                }
+            } catch (err) {
+                console.error("Error toggling TTS:", err);
+                showToast("Error updating voice settings: " + err.message, "error");
+            }
+        }
+        
+        window.deleteRoom = async function() {
+            console.log("Delete room called - Current editing room:", currentEditingRoom);
+            console.log("Current user:", currentUser);
+            
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            
+            if (!currentEditingRoom) {
+                console.error("currentEditingRoom is null - this should not happen!");
+                console.log("Available rooms:", availableRooms);
+                showToast("Error: No room selected for deletion. Please close this dialog and try again.", "error");
+                return;
+            }
+            
+            if (!currentEditingRoom.room_id) {
+                console.error("currentEditingRoom exists but has no room_id:", currentEditingRoom);
+                showToast("Error: Invalid room data. Please refresh the page and try again.", "error");
+                return;
+            }
+            
+            // Store room data locally to avoid issues if currentEditingRoom gets cleared
+            const roomToDelete = {
+                room_id: currentEditingRoom.room_id,
+                room_name: currentEditingRoom.room_name
+            };
+            console.log("Stored room data for deletion:", roomToDelete);
+            
+            if (!isAdmin) {
+                showToast("Only administrators can delete rooms", "warning");
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the room "${roomToDelete.room_name}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const roomIdToDelete = roomToDelete.room_id;
+                
+                console.log(`Attempting to delete room: ${roomIdToDelete}`);
+                console.log(`DELETE URL: ${backendUrl}/rooms/${roomIdToDelete}`);
+                
+                const response = await fetch(`${backendUrl}/rooms/${roomIdToDelete}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                console.log("Delete response status:", response.status);
+                console.log("Delete response:", response);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("Delete successful:", result);
+                    hideRoomSettingsModal();
+                    
+                    // If deleting current room, switch to general
+                    if (roomIdToDelete === currentRoomId) {
+                        await loadRooms();
+                        const generalRoom = availableRooms.find(r => r.room_id === 'general');
+                        if (generalRoom) {
+                            switchToRoom('general', generalRoom.room_name, generalRoom);
+                        } else {
+                            switchToRoom('general', 'General Chat');
+                        }
+                    } else {
+                        await loadRooms();
+                    }
+                } else {
+                    const error = await response.json();
+                    console.error("Delete failed:", error);
+                    showToast(`Failed to delete room: ${error.detail || 'Unknown error'}`, "error");
+                }
+            } catch (err) {
+                console.error("Error deleting room:", err);
+                showToast("Error deleting room: " + err.message, "error");
+            }
+        }
+        
+        // User Management Functions
+        
+        window.showUserManagement = async function() {
+            // Security check: Only allow admin users to access user management
+            if (!currentUser || currentUser.role !== 'admin') {
+                showToast("Access denied: Admin privileges required", "error");
+                return;
+            }
+            document.getElementById("userManagementModal").style.display = "block";
+            await loadUsers();
+        }
+        
+        window.hideUserManagement = function() {
+            document.getElementById("userManagementModal").style.display = "none";
+        }
+        
+        // Store users globally for edit functionality
+        let currentUsersList = [];
+        
+        async function loadUsers() {
+            try {
+                // Use relative URLs through nginx reverse proxy
+            const backendUrl = "";
+                const response = await fetch(`${backendUrl}/admin/users`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    currentUsersList = users; // Store users globally
+                    displayUsersList(users);
+                } else {
+                    showToast("Failed to load users", "error");
+                }
+            } catch (err) {
+                console.error("Error loading users:", err);
+                showToast("Error loading users: " + err.message, "error");
+            }
+        }
+        
+        function displayUsersList(users) {
+            const usersList = document.getElementById("usersManagementList");
+            usersList.innerHTML = "";
+            
+            if (users.length === 0) {
+                usersList.innerHTML = '<div style="text-align: center; padding: 20px; color: #bdc3c7;">No users found</div>';
+                return;
+            }
+            
+            console.log("Displaying users list:", users);
+            
+            users.forEach(user => {
+                // Check for missing id - this is a data integrity issue that should be investigated
+                if (!user.id && user.id !== 0) {
+                    console.error("CRITICAL: User object missing id:", user);
+                    console.error("This indicates a backend data integrity issue!");
+                    return; // Skip this malformed user
+                }
+                
+                const userElement = document.createElement("div");
+                userElement.className = "user-item";
+                userElement.style.borderLeft = `4px solid #3498db`;
+                userElement.style.cssText = `
+                    padding: 16px;
+                    margin: 8px 0;
+                    background: #34495e;
+                    border-radius: 8px;
+                    border-left: 4px solid #3498db;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+                
+                const userInfo = document.createElement("div");
+                userInfo.innerHTML = `
+                    <strong style="color: #ecf0f1; font-size: 14px;">${user.username}</strong>
+                    <div style="color: #bdc3c7; font-size: 12px; margin-top: 4px;">
+                        Role: ${user.role}
+                        ${user.is_kid_account ? ' • 👶 Kid Account' : ''}
+                    </div>
+                `;
+                
+                const userActions = document.createElement("div");
+                userActions.innerHTML = `
+                    <button onclick="editUser(${user.id})" style="background: #f39c12; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px; font-size: 12px;">Edit</button>
+                    <button onclick="resetUserPassword(${user.id}, '${user.username}')" style="background: #e67e22; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px; font-size: 12px;">Reset Password</button>
+                    <button onclick="deleteUser(${user.id}, '${user.username}')" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
+                `;
+                
+                userElement.appendChild(userInfo);
+                userElement.appendChild(userActions);
+                usersList.appendChild(userElement);
+            });
+        }
+        
+        window.showCreateUserForm = function() {
+            document.getElementById("userModalTitle").textContent = "Create User";
+            document.getElementById("newUserUsername").value = "";
+            document.getElementById("newUserPassword").value = "";
+            document.getElementById("newUserPassword").placeholder = "Password (required)";
+            document.getElementById("newUserRole").value = "user";
+            document.getElementById("newUserKidAccount").checked = false;
+            document.getElementById("saveUserBtn").textContent = "Create User";
+            currentEditingUser = null;
+            document.getElementById("createUserModal").style.display = "block";
+        }
+        
+        window.hideCreateUserModal = function() {
+            document.getElementById("createUserModal").style.display = "none";
+        }
+        
+        window.editUser = function(userId) {
+            // Find user in the stored users list
+            const user = currentUsersList.find(u => u.id == userId);
+            if (!user) {
+                console.error("User not found:", userId);
+                showToast("User not found", "error");
+                return;
+            }
+            
+            // Populate form with current user data
+            document.getElementById("userModalTitle").textContent = "Edit User";
+            document.getElementById("newUserUsername").value = user.username;
+            document.getElementById("newUserPassword").value = ""; // Don't populate password
+            document.getElementById("newUserPassword").placeholder = "Password (leave blank to keep current)";
+            document.getElementById("newUserRole").value = user.role;
+            document.getElementById("newUserKidAccount").checked = user.is_kid_account || false;
+            document.getElementById("saveUserBtn").textContent = "Update User";
+            currentEditingUser = userId;
+            document.getElementById("createUserModal").style.display = "block";
+        }
+        
+        window.saveUser = async function() {
+            const username = document.getElementById("newUserUsername").value.trim();
+            const password = document.getElementById("newUserPassword").value;
+            const role = document.getElementById("newUserRole").value;
+            const isKidAccount = document.getElementById("newUserKidAccount").checked;
+            
+            // For new users, both username and password are required
+            // For editing existing users, password is optional (only update if provided)
+            if (!username) {
+                showToast("Username is required", "error");
+                return;
+            }
+            
+            if (!currentEditingUser && !password) {
+                showToast("Password is required for new users", "error");
+                return;
+            }
+            
+            try {
+                const backendUrl = "";
+                
+                if (currentEditingUser) {
+                    // For existing users, update user info first (without password)
+                    const updateResponse = await fetch(`${backendUrl}/admin/users/${currentEditingUser}`, {
+                        method: 'PUT',
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            role: role,
+                            is_kid_account: isKidAccount
+                        })
+                    });
+                    
+                    if (!updateResponse.ok) {
+                        const error = await updateResponse.json();
+                        showToast(`Failed to update user: ${error.detail}`, "error");
+                        return;
+                    }
+                    
+                    // If password was provided, update it separately using the password reset endpoint
+                    if (password && password.trim()) {
+                        const passwordResponse = await fetch(`${backendUrl}/admin/users/${currentEditingUser}/reset-password`, {
+                            method: 'POST',
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${authToken}`
+                            },
+                            body: JSON.stringify({
+                                new_password: password
+                            })
+                        });
+                        
+                        if (!passwordResponse.ok) {
+                            const error = await passwordResponse.json();
+                            showToast(`Failed to update password: ${error.detail}`, "error");
+                            return;
+                        }
+                    }
+                    
+                    hideCreateUserModal();
+                    await loadUsers();
+                    showToast("User updated successfully", "success");
+                    
+                } else {
+                    // For new users, create with password
+                    const response = await fetch(`${backendUrl}/admin/users`, {
+                        method: 'POST',
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            username: username,
+                            password: password,
+                            role: role,
+                            is_kid_account: isKidAccount
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        hideCreateUserModal();
+                        await loadUsers();
+                        showToast("User created successfully", "success");
+                    } else {
+                        const error = await response.json();
+                        showToast(`Failed to create user: ${error.detail}`, "error");
+                    }
+                }
+                
+            } catch (err) {
+                console.error("Error saving user:", err);
+                showToast("Error saving user: " + err.message, "error");
+            }
+        }
+        
+        window.resetUserPassword = function(userId, username) {
+            currentPasswordResetUserId = userId;
+            document.getElementById("resetPasswordUserInfo").textContent = `Reset password for: ${username}`;
+            document.getElementById("newPasswordInput").value = "";
+            document.getElementById("confirmPasswordInput").value = "";
+            document.getElementById("passwordResetModal").style.display = "block";
+        }
+        
+        window.hidePasswordResetModal = function() {
+            document.getElementById("passwordResetModal").style.display = "none";
+        }
+        
+        window.confirmPasswordReset = async function() {
+            const newPassword = document.getElementById("newPasswordInput").value;
+            const confirmPassword = document.getElementById("confirmPasswordInput").value;
+            
+            if (!newPassword || !confirmPassword) {
+                showToast("Both password fields are required", "error");
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast("Passwords do not match", "error");
+                return;
+            }
+            
+            try {
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/admin/users/${currentPasswordResetUserId}/reset-password`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        new_password: newPassword
+                    })
+                });
+                
+                if (response.ok) {
+                    hidePasswordResetModal();
+                    showToast("Password reset successfully", "success");
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to reset password: ${error.detail}`, "error");
+                }
+            } catch (err) {
+                console.error("Error resetting password:", err);
+                showToast("Error resetting password: " + err.message, "error");
+            }
+        }
+        
+        window.deleteUser = async function(userId, username) {
+            if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const backendUrl = "";
+                const response = await fetch(`${backendUrl}/admin/users/${userId}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    await loadUsers();
+                    showToast(`User "${username}" deleted successfully`, "success");
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to delete user: ${error.detail}`, "error");
+                }
+            } catch (err) {
+                console.error("Error deleting user:", err);
+                showToast("Error deleting user: " + err.message, "error");
+            }
+        }
+        
+    </script>
+</body>
+</html>

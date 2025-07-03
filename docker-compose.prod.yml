@@ -1,0 +1,130 @@
+# Simplified Production Docker Compose
+# Core services only for production deployment
+
+services:
+  # Redis Queue/Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: ai-chat-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API & WebSocket Server
+  backend:
+    image: quay.io/jary/ai-chat-system-backend:latest
+    container_name: ai-chat-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      
+      # Backend Configuration
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      
+      # AI Model Configuration (External)
+      - AI_MODEL_URL=http://10.0.0.38:1234
+      
+      # Application Configuration
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+      
+      # Chat Configuration
+      - MAX_MESSAGE_LENGTH=2000
+      - MAX_CHAT_HISTORY=100
+      - AI_RESPONSE_TIMEOUT=30
+      
+      # Authentication Configuration
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-this-in-production}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      
+      # Default Admin User Configuration
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123!}
+      - ADMIN_FULL_NAME=${ADMIN_FULL_NAME:-System Administrator}
+      
+      # Production settings
+      - ENVIRONMENT=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-chat-network
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ai-chat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - backend
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Web-based Chat Client
+  webclient:
+    image: quay.io/jary/ai-chat-system-webclient:latest
+    container_name: ai-chat-webclient
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Persistent volumes
+volumes:
+  redis_data:
+    driver: local
+
+# Networks
+networks:
+  ai-chat-network:
+    driver: bridge 

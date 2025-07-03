@@ -1,0 +1,113 @@
+# Development Docker Compose
+# For local development and testing
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ai-chat-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    # For development - build locally
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    # For production - use Quay registry
+    # image: quay.io/jary/ai-chat-system-backend:latest
+    container_name: ai-chat-backend-dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - AI_MODEL_URL=http://10.0.0.38:1234
+      - LOG_LEVEL=DEBUG
+      - DEBUG=true
+      - ELEVENLABS_API_KEY=sk_da885e4eb9a864666526cfc4757c5ebc8395089dd39ab2b6
+      - ELEVENLABS_VOICE_ID=N2lVS1w4EtoT3dr4eOWO
+      - ELEVENLABS_MODEL=eleven_flash_v2_5
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-chat-network
+    volumes:
+      - ./logs:/app/logs
+      - ./shared:/app/shared
+      - ./backend:/app/backend
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Web-based Chat Client
+  webclient:
+    build:
+      context: .
+      dockerfile: Dockerfile.webclient
+    container_name: ai-chat-webclient-dev
+    restart: unless-stopped
+    # No external ports - accessed via nginx reverse proxy
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8000
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: ai-chat-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+      - "3443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - webclient
+    networks:
+      - ai-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  ai-chat-network:
+    driver: bridge 

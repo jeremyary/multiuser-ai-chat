@@ -1,0 +1,66 @@
+FROM node:18-alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Set working directory
+WORKDIR /app
+
+# Create a simple web client
+RUN mkdir -p /app/public /app/src
+
+# Create package.json
+RUN echo '{\
+  "name": "ai-chat-webclient",\
+  "version": "1.0.0",\
+  "description": "Web client for AI Chat System",\
+  "main": "server.js",\
+  "scripts": {\
+    "start": "node server.js",\
+    "build": "echo Build complete"\
+  },\
+  "dependencies": {\
+    "express": "^4.18.2",\
+    "cors": "^2.8.5"\
+  }\
+}' > package.json
+
+# Install dependencies
+RUN npm install
+
+# Create simple web server
+RUN echo 'const express = require("express");\
+const path = require("path");\
+const cors = require("cors");\
+\
+const app = express();\
+const PORT = process.env.PORT || 3000;\
+\
+app.use(cors());\
+app.use(express.static("public"));\
+app.use(express.json());\
+\
+app.get("/", (req, res) => {\
+  res.sendFile(path.join(__dirname, "public", "index.html"));\
+});\
+\
+app.get("/health", (req, res) => {\
+  res.json({ status: "healthy", timestamp: new Date().toISOString() });\
+});\
+\
+app.listen(PORT, "0.0.0.0", () => {\
+  console.log(`Web client running on port ${PORT}`);\
+});' > server.js
+
+# Copy the HTML file
+COPY public/index.html public/index.html
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Start the web server
+CMD ["npm", "start"] 
